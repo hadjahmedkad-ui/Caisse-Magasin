@@ -194,12 +194,29 @@ public class MainActivity extends Activity {
  add(r,btn("✕",0xffb02031,()->new AlertDialog.Builder(this).setTitle("Supprimer l'article ?").setMessage(p.optString("name")).setNegativeButton("Annuler",null).setPositiveButton("Supprimer",(d,w)->{products.remove(p);save();show("Stock");}).show()),0.5f);
  }
  void edit(JSONObject p){
- body.removeAllViews();LinearLayout form=panel(body,"Modifier l'article : "+p.optString("name"));
- EditText name=field("Nom",p.optString("name")),pr=field("Prix de vente",p.optDouble("price")==0?"":String.valueOf(p.optDouble("price"))),cost=field("Prix d'achat",p.optDouble("cost")==0?"":String.valueOf(p.optDouble("cost"))),q=field("Stock actuel",String.valueOf(p.optDouble("stock")));
- form.addView(name);form.addView(pr);form.addView(cost);form.addView(q);
- form.addView(btn("✓ Enregistrer les modifications",green,()->{
- if(name.getText().toString().trim().isEmpty()||num(pr.getText().toString())<0||num(q.getText().toString())<0||num(cost.getText().toString())<0){toast("Valeurs incorrectes");return;}
- try{p.put("name",name.getText().toString().trim());p.put("price",num(pr.getText().toString()));p.put("cost",num(cost.getText().toString()));p.put("stock",num(q.getText().toString()));}catch(Exception e){}
+ body.removeAllViews();LinearLayout form=panel(body,"✎ Modifier l'article : "+p.optString("name"));
+ EditText name=field("Nom",p.optString("name"));
+ EditText barcode=field("Code-barres",p.optString("code"));
+ EditText pr=field("Prix de vente",p.optDouble("price")==0?"":String.valueOf(p.optDouble("price")));
+ EditText cost=field("Prix d'achat",p.optDouble("cost")==0?"":String.valueOf(p.optDouble("cost")));
+ EditText q=field("Stock actuel",String.valueOf(p.optDouble("stock")));
+ Spinner cat=spin(cats),unit=spin(units);
+ int catPos=Arrays.asList(cats).indexOf(p.optString("cat")),unitPos=Arrays.asList(units).indexOf(p.optString("unit"));
+ cat.setSelection(Math.max(0,catPos));unit.setSelection(Math.max(0,unitPos));
+ LinearLayout r1=row();form.addView(r1);add(r1,name,3);add(r1,cat,2);add(r1,unit,1);
+ LinearLayout r2=row();form.addView(r2);add(r2,barcode,2);add(r2,cost,1);add(r2,pr,1);add(r2,q,1);
+ form.addView(btn("✓ Enregistrer toutes les modifications",green,()->{
+ String n=name.getText().toString().trim(),code=barcode.getText().toString().trim();
+ JSONObject duplicate=find(code);
+ if(n.isEmpty()||code.isEmpty()||(duplicate!=null&&duplicate!=p)){toast("Nom ou code-barres invalide / déjà utilisé");return;}
+ if(num(pr.getText().toString())<0||num(q.getText().toString())<0||num(cost.getText().toString())<0){toast("Valeurs négatives interdites");return;}
+ String previousCode=p.optString("code");
+ try{
+ p.put("name",n);p.put("code",code);p.put("cat",cat.getSelectedItem().toString());p.put("unit",unit.getSelectedItem().toString());
+ p.put("price",num(pr.getText().toString()));p.put("cost",num(cost.getText().toString()));p.put("stock",num(q.getText().toString()));
+ if(!p.has("initial"))p.put("initial",num(q.getText().toString()));
+ }catch(Exception e){}
+ if(previousCode.equals(chosenCode)){chosenCode=code;chosen=n;}
  save();show("Stock");
  }));
  form.addView(btn("← Annuler",blue,()->show("Stock")));
