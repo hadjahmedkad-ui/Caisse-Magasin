@@ -138,10 +138,88 @@ public class MainActivity extends Activity {
  }));
  LinearLayout bottom=panel(body,"Stock — "+p.optString("cat"));bottom.addView(txt("Stock initial et mouvements à renseigner dans l'inventaire | Stock disponible : "+p.optDouble("stock")+" "+p.optString("unit"),16,navy));
  }
- void stock(){LinearLayout form=panel(body,"Gestion du stock et création de produits");EditText name=field("Nom de l'article",""),purchase=field("Prix d'achat",""),sell=field("Prix de vente",""),quantity=field("Stock initial",""),barcode=field("Code-barres","");Spinner cat=spin(cats),unit=spin(units);form.addView(name);form.addView(cat);form.addView(unit);form.addView(purchase);form.addView(sell);form.addView(quantity);form.addView(barcode);form.addView(btn("Générer un code interne",blue,()->barcode.setText("29"+System.currentTimeMillis())),new LinearLayout.LayoutParams(-1,-2));form.addView(btn("Enregistrer le produit",green,()->{String n=name.getText().toString().trim(),b=barcode.getText().toString().trim();if(n.isEmpty()||b.isEmpty()||find(b)!=null){toast("Nom ou code manquant, ou code déjà utilisé");return;}double q=num(quantity.getText().toString()),pr=num(sell.getText().toString()),co=num(purchase.getText().toString());if(q<0||pr<0||co<0){toast("Valeur négative interdite");return;}products.add(item(n,cat.getSelectedItem().toString(),b,unit.getSelectedItem().toString(),co,pr,q));save();show("Stock");}));
- LinearLayout list=panel(body,"Inventaire / sorties");for(JSONObject p:products){LinearLayout r=row();list.addView(r);add(r,txt(p.optString("name")+" | "+p.optString("code")+" | "+eur(p.optDouble("price"))+" | Reste "+p.optDouble("stock")+" "+p.optString("unit"),17,navy),4);add(r,btn("Modifier",blue,()->edit(p)),1);}}
- void edit(JSONObject p){LinearLayout form=panel(body,"Modifier : "+p.optString("name"));EditText pr=field("Prix",String.valueOf(p.optDouble("price"))),q=field("Stock",String.valueOf(p.optDouble("stock")));form.addView(pr);form.addView(q);form.addView(btn("Sauvegarder",green,()->{try{p.put("price",num(pr.getText().toString()));p.put("stock",num(q.getText().toString()));}catch(Exception e){}save();show("Stock");}));}
- void codes(){LinearLayout p=panel(body,"Recherche par code-barres");codeField=field("Saisir ou scanner le code avec un lecteur clavier","");p.addView(codeField);p.addView(btn("Rechercher et ajouter au ticket",blue,()->{JSONObject x=find(codeField.getText().toString().trim());if(x==null){toast("Code inconnu");return;}chosen=x.optString("name");chosenCode=x.optString("code");show("Caisse");}));p.addView(txt("Lecteur de codes-barres USB ou Bluetooth configuré comme clavier. La lecture caméra et l'impression d'étiquettes ne sont pas encore intégrées.",16,navy));}
+ void stock(){
+ LinearLayout layout=row();body.addView(layout);
+ LinearLayout sidebar=col(),main=col();
+ layout.addView(sidebar,new LinearLayout.LayoutParams(0,-2,1.25f));
+ layout.addView(main,new LinearLayout.LayoutParams(0,-2,5.4f));
+ LinearLayout categories=panel(sidebar,"Catégories de produits");
+ for(int j=0;j<cats.length;j++){String c=cats[j];categories.addView(btn(catIcons[j]+" "+c,catColors[j],()->stockCategory(c)));}
+ LinearLayout form=panel(main,"▤ Gestion du stock — ajouter un article");
+ LinearLayout fields=row();form.addView(fields);
+ EditText name=field("Nom de l'article",""),purchase=field("Prix d'achat (€)",""),sell=field("Prix de vente (€)",""),quantity=field("Stock initial",""),barcode=field("Code-barres","");
+ Spinner cat=spin(cats),unit=spin(units);
+ add(fields,name,3);add(fields,cat,2);add(fields,unit,1);add(fields,purchase,1.3f);add(fields,sell,1.3f);add(fields,quantity,1.2f);
+ LinearLayout codes=row();form.addView(codes);add(codes,barcode,3);
+ add(codes,btn("▥ Code interne",blue,()->barcode.setText("INT"+System.currentTimeMillis())),1);
+ add(codes,btn("✓ Enregistrer",green,()->{
+ String n=name.getText().toString().trim(),b=barcode.getText().toString().trim();
+ if(n.isEmpty()||b.isEmpty()||find(b)!=null){toast("Nom ou code manquant, ou code déjà utilisé");return;}
+ double q=num(quantity.getText().toString()),pr=num(sell.getText().toString()),co=num(purchase.getText().toString());
+ if(q<0||pr<0||co<0){toast("Valeur négative interdite");return;}
+ JSONObject p=item(n,cat.getSelectedItem().toString(),b,unit.getSelectedItem().toString(),co,pr,q);
+ try{p.put("initial",q);}catch(Exception e){}
+ products.add(p);save();show("Stock");
+ }),1);
+ LinearLayout inventory=panel(main,"▤ Inventaire et mouvements de stock");
+ LinearLayout headers=row();inventory.addView(headers);
+ for(String h:new String[]{"Article","Code-barres","P. achat","P. vente","Stock initial","Sorties","Stock restant","Actions"})add(headers,txt(h,12,navy),1);
+ for(JSONObject p:products)stockLine(inventory,p);
+ LinearLayout actions=panel(main,"Actions de stock");
+ LinearLayout ar=row();actions.addView(ar);
+ add(ar,btn("▤ Inventaire",blue,()->show("Stock")),1);
+ add(ar,btn("▥ Codes-barres",blue,()->show("Codes-barres")),1);
+ add(ar,btn("▣ Historique",blue,()->show("Rapports")),1);
+ }
+ void stockCategory(String category){
+ body.removeAllViews();
+ LinearLayout pane=panel(body,"Stock — "+category);
+ pane.addView(btn("← Retour à l'inventaire",blue,()->show("Stock")));
+ for(JSONObject p:products)if(category.equals("Tous les produits")||category.equals(p.optString("cat")))stockLine(pane,p);
+ }
+ void stockLine(LinearLayout parent,JSONObject p){
+ LinearLayout r=row();parent.addView(r);
+ double initial=p.has("initial")?p.optDouble("initial"):p.optDouble("stock");
+ add(r,txt(p.optString("name"),12,navy),1.8f);
+ add(r,txt(p.optString("code"),12,navy),1.3f);
+ add(r,txt(p.optDouble("cost")==0?"—":eur(p.optDouble("cost")),12,navy),1);
+ add(r,txt(p.optDouble("price")==0?"À saisir":eur(p.optDouble("price")),12,navy),1);
+ add(r,txt(String.valueOf(initial),12,navy),1);
+ add(r,txt(String.valueOf(Math.max(0,initial-p.optDouble("stock"))),12,navy),1);
+ add(r,txt(p.optDouble("stock")+" "+p.optString("unit"),12,green),1.2f);
+ add(r,btn("✎ Modifier",blue,()->edit(p)),1);
+ add(r,btn("✕",0xffb02031,()->new AlertDialog.Builder(this).setTitle("Supprimer l'article ?").setMessage(p.optString("name")).setNegativeButton("Annuler",null).setPositiveButton("Supprimer",(d,w)->{products.remove(p);save();show("Stock");}).show()),0.5f);
+ }
+ void edit(JSONObject p){
+ body.removeAllViews();LinearLayout form=panel(body,"Modifier l'article : "+p.optString("name"));
+ EditText name=field("Nom",p.optString("name")),pr=field("Prix de vente",p.optDouble("price")==0?"":String.valueOf(p.optDouble("price"))),cost=field("Prix d'achat",p.optDouble("cost")==0?"":String.valueOf(p.optDouble("cost"))),q=field("Stock actuel",String.valueOf(p.optDouble("stock")));
+ form.addView(name);form.addView(pr);form.addView(cost);form.addView(q);
+ form.addView(btn("✓ Enregistrer les modifications",green,()->{
+ if(name.getText().toString().trim().isEmpty()||num(pr.getText().toString())<0||num(q.getText().toString())<0||num(cost.getText().toString())<0){toast("Valeurs incorrectes");return;}
+ try{p.put("name",name.getText().toString().trim());p.put("price",num(pr.getText().toString()));p.put("cost",num(cost.getText().toString()));p.put("stock",num(q.getText().toString()));}catch(Exception e){}
+ save();show("Stock");
+ }));
+ form.addView(btn("← Annuler",blue,()->show("Stock")));
+ }
+ void codes(){
+ LinearLayout layout=row();body.addView(layout);
+ LinearLayout left=col(),right=col();layout.addView(left,new LinearLayout.LayoutParams(0,-2,1));layout.addView(right,new LinearLayout.LayoutParams(0,-2,1));
+ LinearLayout scan=panel(left,"▥ Scanner un code-barres");
+ codeField=field("Code-barres : saisie ou lecteur externe","");
+ scan.addView(codeField);
+ scan.addView(btn("🔍 Rechercher",blue,()->{
+ JSONObject x=find(codeField.getText().toString().trim());if(x==null){toast("Code inconnu");return;}
+ chosen=x.optString("name");chosenCode=x.optString("code");show("Produits");
+ }));
+ LinearLayout selected=panel(left,"Produit sélectionné");
+ JSONObject p=find(chosenCode);selected.addView(txt(p==null?"Aucun article sélectionné":p.optString("name")+" • "+p.optString("code")+" • "+p.optDouble("stock")+" "+p.optString("unit"),17,navy));
+ LinearLayout out=panel(right,"▤ Sorties et mouvements");
+ out.addView(txt("Les sorties de stock sont enregistrées à la validation du règlement.",16,navy));
+ out.addView(btn("▣ Aller à la caisse",green,()->show("Caisse")));
+ LinearLayout history=panel(right,"▤ Derniers règlements");
+ int start=Math.max(0,sales.size()-10);
+ for(int i=sales.size()-1;i>=start;i--){JSONObject sale=sales.get(i);history.addView(txt(new java.text.SimpleDateFormat("dd/MM HH:mm",Locale.FRANCE).format(new Date(sale.optLong("time")))+"  "+sale.optString("method")+"  "+eur(sale.optDouble("total")),14,navy));}
+ }
  void pay(String method){if(cart.isEmpty()){toast("Ticket vide");return;}new AlertDialog.Builder(this).setTitle("Confirmer le règlement").setMessage(method+" — "+eur(total())).setNegativeButton("Annuler",null).setPositiveButton("Valider",(d,w)->{HashMap<String,Double> used=new HashMap<>();for(JSONObject c:cart){String code=c.optString("code");if(!code.isEmpty())used.put(code,used.getOrDefault(code,0.0)+c.optDouble("qty"));}for(String code:used.keySet()){JSONObject p=find(code);if(p==null||p.optDouble("stock")<used.get(code)){toast("Stock insuffisant : "+code);return;}}for(String code:used.keySet()){JSONObject p=find(code);try{p.put("stock",p.optDouble("stock")-used.get(code));}catch(Exception e){}}JSONObject s=new JSONObject();try{s.put("time",System.currentTimeMillis());s.put("method",method);s.put("total",total());s.put("items",new JSONArray(cart));}catch(Exception e){}sales.add(s);cart.clear();save();show("Caisse");toast("Vente enregistrée");}).show();}
  void rapports(){LinearLayout p=panel(body,"Rapports et historique");double sum=0;for(JSONObject s:sales)sum+=s.optDouble("total");p.addView(txt("Nombre de ventes : "+sales.size()+"\nChiffre d'affaires : "+eur(sum)+"\nProduits : "+products.size(),23,navy));for(JSONObject s:sales)p.addView(txt(new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.FRANCE).format(new Date(s.optLong("time")))+" — "+s.optString("method")+" — "+eur(s.optDouble("total")),16,navy));}
  void parametres(){LinearLayout p=panel(body,"Paramètres");p.addView(txt("Les articles et les ventes sont sauvegardés localement hors ligne. Les moyens de paiement sont enregistrés, sans encaissement bancaire électronique.",19,navy));}
