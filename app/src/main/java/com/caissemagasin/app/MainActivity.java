@@ -58,22 +58,22 @@ public class MainActivity extends Activity {
  void show(String page){
  root=col();root.setBackgroundColor(0xffd5e2f1);setContentView(root);
  LinearLayout top=row();top.setBackgroundColor(0xff061629);root.addView(top);
- add(top,txt("🛒 Caisse Magasin",22,gold),2.4f);
+ add(top,txt("🛒 Caisse Magasin",25,gold),2.4f);
  String[] pages={"Caisse","Stock","Produits","Codes-barres","Rapports","Paramètres"};
  String[] symbols={"▣","▤","▦","▥","▥","⚙"};
- for(int i=0;i<pages.length;i++){String n=pages[i];add(top,btn(symbols[i]+"\n"+n,n.equals(page)?0xff087bd3:0xff061629,()->show(n)),1);}
+ for(int i=0;i<pages.length;i++){String n=pages[i];add(top,btn(symbols[i]+" "+n,n.equals(page)?0xff087bd3:0xff061629,()->show(n)),1);}
  LinearLayout nav=row();nav.setBackgroundColor(0xff0b315b);root.addView(nav);
  add(nav,btn("☰ Menu",blue,()->show("Caisse")),1);
  add(nav,btn("← Retour",blue,()->show("Caisse")),1);
- add(nav,txt("● Hors ligne  |  Caisse Magasin",13,Color.WHITE),3);
+ add(nav,txt("● Hors ligne",13,Color.WHITE),2);
  ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
  body=col();scroll.addView(body);
  switch(page){case "Caisse":caisse();break;case "Produits":produits(null);break;case "Stock":stock();break;case "Codes-barres":codes();break;case "Rapports":rapports();break;default:parametres();}
  }
  LinearLayout categoryTile(int index,Runnable action){
  LinearLayout tile=col();tile.setGravity(Gravity.CENTER);tile.setBackground(bg(catColors[index]));tile.setPadding(3,3,3,3);
- TextView image=txt(catIcons[index],30,Color.WHITE);image.setGravity(Gravity.CENTER);tile.addView(image,new LinearLayout.LayoutParams(-1,0,1.2f));
- TextView title=txt(cats[index],13,Color.WHITE);title.setTypeface(null,Typeface.BOLD);title.setGravity(Gravity.CENTER);
+ TextView image=txt(catIcons[index],42,Color.WHITE);image.setGravity(Gravity.CENTER);tile.addView(image,new LinearLayout.LayoutParams(-1,0,1.2f));
+ TextView title=txt(cats[index],17,Color.WHITE);title.setTypeface(null,Typeface.BOLD);title.setGravity(Gravity.CENTER);
  tile.addView(title,new LinearLayout.LayoutParams(-1,0,1));
  tile.setOnClickListener(v->action.run());return tile;
  }
@@ -81,7 +81,7 @@ public class MainActivity extends Activity {
  LinearLayout main=row();body.addView(main);
  LinearLayout left=col(),right=col();main.addView(left,new LinearLayout.LayoutParams(0,-2,1.04f));main.addView(right,new LinearLayout.LayoutParams(0,-2,1.1f));
  LinearLayout categories=panel(left,"▤ Catégories de produits");
- for(int i=0;i<cats.length;i+=4){LinearLayout r=row();categories.addView(r);for(int j=i;j<Math.min(i+4,cats.length);j++){String c=cats[j];int color=catColors[j];LinearLayout tile=categoryTile(j,()->{show("Produits");produits(c.equals("Tous les produits")?null:c);});r.addView(tile,new LinearLayout.LayoutParams(0,100,1));}}
+ for(int i=0;i<cats.length;i+=4){LinearLayout r=row();categories.addView(r);for(int j=i;j<Math.min(i+4,cats.length);j++){String c=cats[j];int color=catColors[j];LinearLayout tile=categoryTile(j,()->{show("Produits");produits(c.equals("Tous les produits")?null:c);});r.addView(tile,new LinearLayout.LayoutParams(0,Math.max(128,(int)(getResources().getDisplayMetrics().heightPixels*0.16f)),1));}}
  LinearLayout search=panel(left,"▥ Recherche rapide");
  EditText query=field("Rechercher un produit (nom ou code-barres)","");search.addView(query);
  search.addView(btn("🔍 Rechercher",blue,()->{String q=query.getText().toString().trim().toLowerCase(Locale.ROOT);for(JSONObject p:products)if(p.optString("name").toLowerCase(Locale.ROOT).contains(q)||p.optString("code").toLowerCase(Locale.ROOT).equals(q)){chosen=p.optString("name");chosenCode=p.optString("code");show("Produits");return;}toast("Produit introuvable");}));
