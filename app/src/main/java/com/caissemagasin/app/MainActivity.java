@@ -360,7 +360,7 @@ public class MainActivity extends Activity {
  add(r,txt(eur(line.optDouble("price")),17,navy),1);
  LinearLayout discount=col();add(r,discount,1);
  discount.addView(txt("Remise : "+line.optDouble("targetDiscount",0)+" %",17,navy));
- Button changeDiscount=btn("Modifier remise",blue,()->editCartLine(line));changeDiscount.setTextSize(15);changeDiscount.setMinHeight(58);discount.addView(changeDiscount,new LinearLayout.LayoutParams(-1,58));
+ Button changeDiscount=btn("Modifier remise",blue,()->editCartLine(line));changeDiscount.setTextSize(15);changeDiscount.setMinHeight(44);discount.addView(changeDiscount,new LinearLayout.LayoutParams(-1,44));
  add(r,txt(String.valueOf(vatFor(line)).replace(".0","")+" %",16,navy),1);
  add(r,txt(eur(lineNet(line)),18,green),1);
  LinearLayout actions=row();add(r,actions,1);
@@ -369,11 +369,15 @@ public class MainActivity extends Activity {
  }
  if(cart.isEmpty())box.addView(txt("Aucun article ajouté pour le moment.",19,navy));box.addView(txt("Promotion 2ᵉ article : réduction appliquée à chaque deuxième unité achetée du même article, pour les unités à la pièce (pas au poids ni au litre). Les remises se cumulent.",14,navy));
  LinearLayout totals=panel(body,"Total des articles, TVA et remises");
- totals.addView(txt("Sous-total après remises : "+eur(subtotal()),22,navy));
- for(double vatRate:new double[]{2.1,5.5,10,20}){double base=0;for(JSONObject line:cart)if(Math.abs(vatFor(line)-vatRate)<0.001)base+=lineNet(line);if(base>0)totals.addView(txt("Dont TVA "+vatRate+" % : "+eur(taxAt(vatRate)),18,navy));}
- totals.addView(txt("TVA incluse dans les prix TTC : "+eur(tax()),19,navy));
- TextView sum=txt("TOTAL À PAYER : "+eur(total()),25,green);sum.setTypeface(null,Typeface.BOLD);sum.setBackground(bg(0xffb4f3bf));totals.addView(sum);
- totals.addView(btn("Valider les articles",green,()->validateArticles()));totals.addView(btn("← Revenir à la caisse",blue,()->show("Caisse")));
+ LinearLayout totalsRow=row();totals.addView(totalsRow,new LinearLayout.LayoutParams(-1,-2));
+ LinearLayout amounts=col();totalsRow.addView(amounts,new LinearLayout.LayoutParams(0,-2,2.6f));
+ amounts.addView(txt("Sous-total après remises : "+eur(subtotal()),22,navy));
+ for(double vatRate:new double[]{2.1,5.5,10,20}){double base=0;for(JSONObject line:cart)if(Math.abs(vatFor(line)-vatRate)<0.001)base+=lineNet(line);if(base>0)amounts.addView(txt("Dont TVA "+vatRate+" % : "+eur(taxAt(vatRate)),18,navy));}
+ amounts.addView(txt("TVA incluse dans les prix TTC : "+eur(tax()),19,navy));
+ LinearLayout bottomActions=col();totalsRow.addView(bottomActions,new LinearLayout.LayoutParams(0,-2,1.4f));
+ TextView sum=txt("TOTAL À PAYER : "+eur(total()),23,green);sum.setTypeface(null,Typeface.BOLD);sum.setGravity(Gravity.CENTER);sum.setBackground(bg(0xffb4f3bf));sum.setMinHeight(62);bottomActions.addView(sum,new LinearLayout.LayoutParams(-1,62));
+ Button validate=btn("Valider les articles",green,()->validateArticles());validate.setTextSize(18);validate.setMinHeight(60);bottomActions.addView(validate,new LinearLayout.LayoutParams(-1,60));
+ Button back=btn("← Revenir à la caisse",blue,()->show("Caisse"));back.setTextSize(18);back.setMinHeight(60);bottomActions.addView(back,new LinearLayout.LayoutParams(-1,60));
  }
  String ticketText(){
  StringBuilder out=new StringBuilder("CAISSE MAGASIN\nTicket des articles\n");
