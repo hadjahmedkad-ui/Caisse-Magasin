@@ -12,7 +12,7 @@ import java.util.*;
 
 public class MainActivity extends Activity {
  final int navy=0xff081b36, blue=0xff14558b, gold=0xffffd56a, green=0xff13833d;
- LinearLayout root,body,caisseCategories; TextView caisseStock; Spinner caisseUnit; EditText qty,price,codeField,quickDiscount; Spinner discountTarget; double pendingDiscount=0; int pendingTarget=1; TextView caisseSelectedName,caisseSelectedQty; boolean remiseValidee=false; Spinner quickCategory,quickProduct,quickCount; String chosen="",chosenCode="";
+ LinearLayout root,body,caisseCategories; TextView caisseStock; Spinner caisseUnit; EditText qty,price,codeField,quickDiscount; Spinner discountTarget; LinkedHashMap<Integer,Double> pendingRemises=new LinkedHashMap<>(); double pendingDiscount=0; int pendingTarget=1; TextView caisseSelectedName,caisseSelectedQty; boolean remiseValidee=false; Spinner quickCategory,quickProduct,quickCount; String chosen="",chosenCode="";
  ArrayList<JSONObject> products=new ArrayList<>(),cart=new ArrayList<>(),sales=new ArrayList<>();
  String[] cats={"Viandes","Poissons","Fruits & Légumes","Aliments & Épicerie","Produits laitiers & Fromages","Boissons","Boulangerie & Viennoiserie","Produits d'entretien","Bricolage","Électricité","Autres produits","Tous les produits"};
  String[] catIcons={"🥩","🐟","🥦","🛒","🧀","🥤","🥐","🧴","🛠","💡","▦","🛍"};
@@ -88,7 +88,7 @@ public class MainActivity extends Activity {
  if(count%3==0){r=row();caisseCategories.addView(r);}count++;
  String label=productIcon(p.optString("name"))+"\n"+p.optString("name");
  Button b=btn(label,catColors[Math.max(0,Arrays.asList(cats).indexOf(p.optString("cat")))],()->{
- chosen=p.optString("name");chosenCode=p.optString("code");pendingDiscount=0;pendingTarget=1;remiseValidee=false;
+ chosen=p.optString("name");chosenCode=p.optString("code");pendingRemises.clear();pendingDiscount=0;pendingTarget=1;remiseValidee=false;
  if(caisseSelectedName!=null)caisseSelectedName.setText(chosen);
  if(quickDiscount!=null)quickDiscount.setText("0");
  if(discountTarget!=null)discountTarget.setSelection(0);
@@ -146,8 +146,8 @@ public class MainActivity extends Activity {
  add(remiseRow,btn("Valider la remise",green,()->{
   double d=num(quickDiscount.getText().toString());
   if(d<0||d>100){toast("Remise entre 0 et 100 %");return;}
-  pendingDiscount=d;pendingTarget=discountTarget.getSelectedItemPosition()+1;remiseValidee=true;
-  toast("Remise de "+d+" % sur la "+pendingTarget+"e unité confirmée");
+  pendingDiscount=d;pendingTarget=discountTarget.getSelectedItemPosition()+1;remiseValidee=true;pendingRemises.put(pendingTarget,d);
+  toast("Remises mémorisées : "+pendingRemises.size()+" | N° "+pendingTarget+" : "+d+" %");
  }),1.5f);
  LinearLayout calc=panel(right,"▣ Calculatrice");
  LinearLayout entry=row();calc.addView(entry);
@@ -169,9 +169,22 @@ public class MainActivity extends Activity {
  }
  void key(String k){if(k.equals("Ajouter")){double q=num(qty.getText().toString()),p=num(price.getText().toString());if(q<=0||p<0||price.getText().toString().trim().isEmpty()){toast("Saisir une quantité et un prix valides");return;}JSONObject selected=find(chosenCode);
  if(selected==null){toast("Sélectionnez une catégorie puis un article");return;}
- if(!remiseValidee){toast("Validez la remise, même à 0 %");return;}
- if(pendingDiscount>0&&(pendingTarget>q||q!=Math.floor(q)||Arrays.asList("kg","g","L","mL").contains(caisseUnit.getSelectedItem().toString()))){toast("La remise ciblée nécessite des unités entières");return;}
- if(selected!=null){double existing=0;for(JSONObject c:cart)if(c.optString("code").equals(chosenCode))existing+=Math.max(0,stockQty(c,selected));double stockQ=stockQty(item("", "", "",caisseUnit.getSelectedItem().toString(),0,0,0),selected);if(stockQ<0){toast("Unité incompatible avec le stock de ce produit");return;}double factor=caisseUnit.getSelectedItem().toString().equals(selected.optString("unit"))?1:((caisseUnit.getSelectedItem().toString().equals("g")||caisseUnit.getSelectedItem().toString().equals("mL"))?0.001:1000);if(q*factor+existing>selected.optDouble("stock")){toast("Stock insuffisant");return;}}JSONObject c=item(chosen.isEmpty()?"Article manuel":chosen,selected==null?"":selected.optString("cat"),chosenCode,selected==null?"pièce":selected.optString("unit"),0,p,0);try{c.put("qty",q);c.put("unit",caisseUnit.getSelectedItem().toString());c.put("discount",0);c.put("secondDiscount",0);c.put("targetDiscount",pendingDiscount);c.put("targetIndex",pendingTarget);}catch(Exception e){}cart.add(c);pendingDiscount=0;pendingTarget=1;remiseValidee=false;chosen="";chosenCode="";save();show("Caisse");toast("Article ajouté à la page 2");return;}
+ boolean discrete=!Arrays.asList("kg","g","L","mL").contains(caisseUnit.getSelectedItem().toString());
+ if(!pendingRemises.isEmpty()&&(!discrete||q!=Math.floor(q))){toast("Les remises numérotées nécessitent des unités entières");return;}
+ for(Integer ix:pendingRemises.keySet())if(ix>q){toast("Unité n° "+ix+" supérieure à la quantité");return;}
+ if(selected!=null){double existing=0;for(JSONObject c:cart)if(c.optString("code").equals(chosenCode))existing+=Math.max(0,stockQty(c,selected));double stockQ=stockQty(item("", "", "",caisseUnit.getSelectedItem().toString(),0,0,0),selected);if(stockQ<0){toast("Unité incompatible avec le stock de ce produit");return;}double factor=caisseUnit.getSelectedItem().toString().equals(selected.optString("unit"))?1:((caisseUnit.getSelectedItem().toString().equals("g")||caisseUnit.getSelectedItem().toString().equals("mL"))?0.001:1000);if(q*factor+existing>selected.optDouble("stock")){toast("Stock insuffisant");return;}}if(pendingRemises.isEmpty()){
+ JSONObject c=item(chosen,selected.optString("cat"),chosenCode,selected.optString("unit"),0,p,0);
+ try{c.put("qty",q);c.put("unit",caisseUnit.getSelectedItem().toString());c.put("discount",0);c.put("secondDiscount",0);c.put("targetDiscount",0);c.put("targetIndex",1);}catch(Exception e){}
+ cart.add(c);
+ }else{
+ for(int ix=1;ix<=(int)q;ix++){
+ double remise=pendingRemises.containsKey(ix)?pendingRemises.get(ix):0;
+ JSONObject c=item(chosen,selected.optString("cat"),chosenCode,selected.optString("unit"),0,p,0);
+ try{c.put("qty",1);c.put("unit",caisseUnit.getSelectedItem().toString());c.put("discount",0);c.put("secondDiscount",0);c.put("targetDiscount",remise);c.put("targetIndex",1);c.put("unitNumber",ix);}catch(Exception e){}
+ cart.add(c);
+ }
+ }
+ pendingRemises.clear();pendingDiscount=0;pendingTarget=1;remiseValidee=false;chosen="";chosenCode="";save();show("Caisse");toast("Article ajouté à la page 2");return;}
  EditText e=qty.hasFocus()?qty:price;String s=e.getText().toString();if(k.equals("←"))s=s.isEmpty()?"":s.substring(0,s.length()-1);else if(k.equals("+"))s=String.valueOf(num(s)+1);else if(k.equals("−"))s=String.valueOf(Math.max(0,num(s)-1));else if(k.equals("×"))s=String.valueOf(num(s)*2);else s+=k.equals(",")?".":k;e.setText(s);e.setSelection(s.length());}
  void produits(String category){
  body.removeAllViews();
@@ -332,11 +345,11 @@ public class MainActivity extends Activity {
  for(String h:new String[]{"Article","Qté / unité","Prix unitaire","Remise %","2ᵉ article %","Total ligne","Actions"})add(header,txt(h,17,navy),1);
  for(JSONObject line:new ArrayList<>(cart)){
  LinearLayout r=row();box.addView(r);
- add(r,txt(line.optString("name"),17,navy),1);
+ add(r,txt(line.optString("name")+(line.has("unitNumber")?" — N° "+line.optInt("unitNumber"):""),17,navy),1);
  add(r,txt(String.format(Locale.FRANCE,"%.3f",line.optDouble("qty"))+" "+line.optString("unit"),16,navy),1);
  add(r,txt(eur(line.optDouble("price")),17,navy),1);
  LinearLayout discount= row();add(r,discount,1);
- discount.addView(txt("N° "+line.optInt("targetIndex",1)+" : "+line.optDouble("targetDiscount",0)+" %",14,navy));
+ discount.addView(txt("Remise unité : "+line.optDouble("targetDiscount",0)+" %",14,navy));
  EditText pct=field("Remise %",String.valueOf(line.optDouble("discount",0)));pct.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);add(discount,pct,2);
  add(discount,btn("✓",green,()->{double d=num(pct.getText().toString());if(d<0||d>100){toast("Remise entre 0 et 100 %");return;}try{line.put("discount",d);}catch(Exception e){}save();show("Ticket");}),1);
  LinearLayout secondRow=row();add(r,secondRow,1);
