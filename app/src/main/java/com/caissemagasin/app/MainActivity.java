@@ -352,11 +352,6 @@ public class MainActivity extends Activity {
  discount.addView(txt("Remise unité : "+line.optDouble("targetDiscount",0)+" %",14,navy));
  EditText pct=field("Remise %",String.valueOf(line.optDouble("discount",0)));pct.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);add(discount,pct,2);
  add(discount,btn("✓",green,()->{double d=num(pct.getText().toString());if(d<0||d>100){toast("Remise entre 0 et 100 %");return;}try{line.put("discount",d);}catch(Exception e){}save();show("Ticket");}),1);
- LinearLayout secondRow=row();add(r,secondRow,1);
- EditText secondPct=field("2ᵉ - %",String.valueOf(line.optDouble("secondDiscount",0)));
- secondPct.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
- add(secondRow,secondPct,2);
- add(secondRow,btn("✓",green,()->{double d=num(secondPct.getText().toString());if(d<0||d>100){toast("Remise 2ᵉ article entre 0 et 100 %");return;}try{line.put("secondDiscount",d);}catch(Exception e){}save();show("Ticket");}),1);
  add(r,txt(eur(lineNet(line)),18,green),1);
  LinearLayout actions=row();add(r,actions,1);
  add(actions,btn("✕",0xffc51c2d,()->{cart.remove(line);save();show("Ticket");}),1);
