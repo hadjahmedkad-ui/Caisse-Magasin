@@ -372,6 +372,8 @@ public class MainActivity extends Activity {
  }
  if(cart.isEmpty())box.addView(txt("Aucun article ajouté pour le moment.",19,navy));box.addView(txt("Promotion 2ᵉ article : réduction appliquée à chaque deuxième unité achetée du même article, pour les unités à la pièce (pas au poids ni au litre). Les remises se cumulent.",14,navy));
  LinearLayout totals=panel(body,"Total des articles, TVA et remises");
+ // Décalage visuel réel vers le haut de 0,80 mm, indépendant de la hauteur de la liste.
+ totals.setTranslationY(-0.8f*getResources().getDisplayMetrics().ydpi/25.4f);
  LinearLayout totalsRow=row();totals.addView(totalsRow,new LinearLayout.LayoutParams(-1,-2));
  LinearLayout amounts=col();totalsRow.addView(amounts,new LinearLayout.LayoutParams(0,-2,2.6f));
  amounts.addView(txt("Sous-total après remises : "+eur(subtotal()),22,navy));
@@ -381,9 +383,6 @@ public class MainActivity extends Activity {
  TextView sum=txt("TOTAL À PAYER : "+eur(total()),23,green);sum.setTypeface(null,Typeface.BOLD);sum.setGravity(Gravity.CENTER);sum.setBackground(bg(0xffb4f3bf));sum.setMinHeight(62);bottomActions.addView(sum,new LinearLayout.LayoutParams(-1,62));
  Button validate=btn("Valider les articles",green,()->validateArticles());validate.setTextSize(18);validate.setMinHeight(60);bottomActions.addView(validate,new LinearLayout.LayoutParams(-1,60));
  Button back=btn("← Revenir à la caisse",blue,()->show("Caisse"));back.setTextSize(18);back.setMinHeight(60);bottomActions.addView(back,new LinearLayout.LayoutParams(-1,60));
- // Décalage vertical de 0,80 mm du bloc récapitulatif sur la page 2.
- android.view.View bottomOffset=new android.view.View(this);
- body.addView(bottomOffset,new LinearLayout.LayoutParams(-1,Math.round(0.8f*getResources().getDisplayMetrics().ydpi/25.4f)));
  }
  String ticketText(){
  StringBuilder out=new StringBuilder("CAISSE MAGASIN\nTicket des articles\n");
