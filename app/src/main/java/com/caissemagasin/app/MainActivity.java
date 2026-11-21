@@ -53,7 +53,19 @@ public class MainActivity extends Activity {
  double num(String s){try{return Double.parseDouble(s.replace(',','.'));}catch(Exception e){return 0;}}
  String eur(double v){return String.format(Locale.FRANCE,"%.2f €",v);}
  JSONObject find(String code){for(JSONObject p:products)if(!code.isEmpty()&&p.optString("code").equals(code))return p;return null;}
- double lineNet(JSONObject c){double d=Math.max(0,Math.min(100,c.optDouble("discount",0)));return c.optDouble("qty")*c.optDouble("price")*(1-d/100.0);}
+ double lineNet(JSONObject c){
+ double qty=Math.max(0,c.optDouble("qty")),unitPrice=Math.max(0,c.optDouble("price"));
+ double discount=Math.max(0,Math.min(100,c.optDouble("discount",0)));
+ double second=Math.max(0,Math.min(100,c.optDouble("secondDiscount",0)));
+ double gross=qty*unitPrice;
+ double afterIndividual=gross*(1-discount/100.0);
+ if(second<=0||qty<2)return afterIndividual;
+ String unit=c.optString("unit","");
+ boolean discrete=!(unit.equals("kg")||unit.equals("g")||unit.equals("L")||unit.equals("mL"));
+ if(!discrete)return afterIndividual;
+ double pairs=Math.floor(qty/2.0);
+ return Math.max(0,afterIndividual-pairs*unitPrice*(1-discount/100.0)*second/100.0);
+ }
  double subtotal(){double t=0;for(JSONObject c:cart)t+=lineNet(c);return t;}
  double taxRate(){return Math.max(0,Math.min(100,num(getPreferences(0).getString("taxRate","0"))));}
  double tax(){return subtotal()*taxRate()/100.0;}
@@ -134,7 +146,7 @@ public class MainActivity extends Activity {
  int[] payColors={0xff1954d2,0xff159c2d,0xff852ac3,0xffef7900};
  for(int j=0;j<methods.length;j++){String method=methods[j];Button payment=btn(icons[j]+"\n"+method,payColors[j],()->pay(method));payment.setTextSize(19);payment.setTypeface(null,Typeface.BOLD);payment.setGravity(Gravity.CENTER);r.addView(payment,new LinearLayout.LayoutParams(0,Math.max(92,(int)(getResources().getDisplayMetrics().heightPixels*0.13f)),1));}
  }
- void key(String k){if(k.equals("Ajouter")){double q=num(qty.getText().toString()),p=num(price.getText().toString());if(q<=0||p<0||price.getText().toString().trim().isEmpty()){toast("Saisir une quantité et un prix valides");return;}JSONObject selected=find(chosenCode);if(selected!=null){double existing=0;for(JSONObject c:cart)if(c.optString("code").equals(chosenCode))existing+=Math.max(0,stockQty(c,selected));double stockQ=stockQty(item("", "", "",caisseUnit.getSelectedItem().toString(),0,0,0),selected);if(stockQ<0){toast("Unité incompatible avec le stock de ce produit");return;}double factor=caisseUnit.getSelectedItem().toString().equals(selected.optString("unit"))?1:((caisseUnit.getSelectedItem().toString().equals("g")||caisseUnit.getSelectedItem().toString().equals("mL"))?0.001:1000);if(q*factor+existing>selected.optDouble("stock")){toast("Stock insuffisant");return;}}JSONObject c=item(chosen.isEmpty()?"Article manuel":chosen,selected==null?"":selected.optString("cat"),chosenCode,selected==null?"pièce":selected.optString("unit"),0,p,0);try{c.put("qty",q);c.put("unit",caisseUnit.getSelectedItem().toString());c.put("discount",0);}catch(Exception e){}cart.add(c);save();show("Caisse");return;}
+ void key(String k){if(k.equals("Ajouter")){double q=num(qty.getText().toString()),p=num(price.getText().toString());if(q<=0||p<0||price.getText().toString().trim().isEmpty()){toast("Saisir une quantité et un prix valides");return;}JSONObject selected=find(chosenCode);if(selected!=null){double existing=0;for(JSONObject c:cart)if(c.optString("code").equals(chosenCode))existing+=Math.max(0,stockQty(c,selected));double stockQ=stockQty(item("", "", "",caisseUnit.getSelectedItem().toString(),0,0,0),selected);if(stockQ<0){toast("Unité incompatible avec le stock de ce produit");return;}double factor=caisseUnit.getSelectedItem().toString().equals(selected.optString("unit"))?1:((caisseUnit.getSelectedItem().toString().equals("g")||caisseUnit.getSelectedItem().toString().equals("mL"))?0.001:1000);if(q*factor+existing>selected.optDouble("stock")){toast("Stock insuffisant");return;}}JSONObject c=item(chosen.isEmpty()?"Article manuel":chosen,selected==null?"":selected.optString("cat"),chosenCode,selected==null?"pièce":selected.optString("unit"),0,p,0);try{c.put("qty",q);c.put("unit",caisseUnit.getSelectedItem().toString());c.put("discount",0);c.put("secondDiscount",0);}catch(Exception e){}cart.add(c);save();show("Caisse");return;}
  EditText e=qty.hasFocus()?qty:price;String s=e.getText().toString();if(k.equals("←"))s=s.isEmpty()?"":s.substring(0,s.length()-1);else if(k.equals("+"))s=String.valueOf(num(s)+1);else if(k.equals("−"))s=String.valueOf(Math.max(0,num(s)-1));else if(k.equals("×"))s=String.valueOf(num(s)*2);else s+=k.equals(",")?".":k;e.setText(s);e.setSelection(s.length());}
  void produits(String category){
  body.removeAllViews();
@@ -278,7 +290,7 @@ public class MainActivity extends Activity {
  void ticketPage(){
  LinearLayout box=panel(body,"▤ Page 2 — Articles achetés / Ticket en cours");
  LinearLayout header=row();box.addView(header);
- for(String h:new String[]{"Article","Qté / unité","Prix unitaire","Remise %","Total ligne"})add(header,txt(h,17,navy),1);
+ for(String h:new String[]{"Article","Qté / unité","Prix unitaire","Remise %","2ᵉ article %","Total ligne"})add(header,txt(h,17,navy),1);
  for(JSONObject line:new ArrayList<>(cart)){
  LinearLayout r=row();box.addView(r);
  add(r,txt(line.optString("name"),17,navy),1);
@@ -287,11 +299,16 @@ public class MainActivity extends Activity {
  LinearLayout discount= row();add(r,discount,1);
  EditText pct=field("Remise %",String.valueOf(line.optDouble("discount",0)));pct.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);add(discount,pct,2);
  add(discount,btn("✓",green,()->{double d=num(pct.getText().toString());if(d<0||d>100){toast("Remise entre 0 et 100 %");return;}try{line.put("discount",d);}catch(Exception e){}save();show("Ticket");}),1);
+ LinearLayout secondRow=row();add(r,secondRow,1);
+ EditText secondPct=field("2ᵉ - %",String.valueOf(line.optDouble("secondDiscount",0)));
+ secondPct.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+ add(secondRow,secondPct,2);
+ add(secondRow,btn("✓",green,()->{double d=num(secondPct.getText().toString());if(d<0||d>100){toast("Remise 2ᵉ article entre 0 et 100 %");return;}try{line.put("secondDiscount",d);}catch(Exception e){}save();show("Ticket");}),1);
  add(r,txt(eur(lineNet(line)),18,green),1);
  }
- if(cart.isEmpty())box.addView(txt("Aucun article ajouté pour le moment.",19,navy));
+ if(cart.isEmpty())box.addView(txt("Aucun article ajouté pour le moment.",19,navy));box.addView(txt("Promotion 2ᵉ article : réduction appliquée à chaque deuxième unité achetée du même article, pour les unités à la pièce (pas au poids ni au litre). Les remises se cumulent.",14,navy));
  LinearLayout totals=panel(body,"Total des articles, TVA et remises");
- totals.addView(txt("Total des articles après remises : "+eur(subtotal()),22,navy));
+ totals.addView(txt("Sous-total après remises : "+eur(subtotal()),22,navy));
  LinearLayout rateRow=row();totals.addView(rateRow);
  add(rateRow,txt("TVA (%) :",19,navy),1);
  EditText rate=field("Taux de TVA à définir",getPreferences(0).getString("taxRate",""));rate.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);add(rateRow,rate,2);
