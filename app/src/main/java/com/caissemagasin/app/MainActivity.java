@@ -103,9 +103,9 @@ public class MainActivity extends Activity {
  LinearLayout pay=panel(right,"▣ Paiement");
  LinearLayout r=row();pay.addView(r);
  String[] methods={"Carte bancaire","Espèces","Chèque bancaire","Chèque restaurant"};
- String[] icons={"▣","▤","▥","▦"};
+ String[] icons={"💳","💶","✍","🍴"};
  int[] payColors={0xff1954d2,0xff159c2d,0xff852ac3,0xffef7900};
- for(int j=0;j<methods.length;j++){String method=methods[j];Button payment=btn(icons[j]+"\n"+method,payColors[j],()->pay(method));payment.setTextSize(19);payment.setTypeface(null,Typeface.BOLD);r.addView(payment,new LinearLayout.LayoutParams(0,Math.max(92,(int)(getResources().getDisplayMetrics().heightPixels*0.13f)),1));}
+ for(int j=0;j<methods.length;j++){String method=methods[j];Button payment=btn(icons[j]+"\n"+method,payColors[j],()->pay(method));payment.setTextSize(19);payment.setTypeface(null,Typeface.BOLD);payment.setGravity(Gravity.CENTER);r.addView(payment,new LinearLayout.LayoutParams(0,Math.max(92,(int)(getResources().getDisplayMetrics().heightPixels*0.13f)),1));}
  }
  void key(String k){if(k.equals("Ajouter")){double q=num(qty.getText().toString()),p=num(price.getText().toString());if(q<=0||p<0||price.getText().toString().trim().isEmpty()){toast("Saisir une quantité et un prix valides");return;}JSONObject selected=find(chosenCode);if(selected!=null){double existing=0;for(JSONObject c:cart)if(c.optString("code").equals(chosenCode))existing+=c.optDouble("qty");if(q+existing>selected.optDouble("stock")){toast("Stock insuffisant");return;}}JSONObject c=item(chosen.isEmpty()?"Article manuel":chosen,selected==null?"":selected.optString("cat"),chosenCode,selected==null?"pièce":selected.optString("unit"),0,p,0);try{c.put("qty",q);}catch(Exception e){}cart.add(c);save();show("Caisse");return;}
  EditText e=qty.hasFocus()?qty:price;String s=e.getText().toString();if(k.equals("←"))s=s.isEmpty()?"":s.substring(0,s.length()-1);else if(k.equals("+"))s=String.valueOf(num(s)+1);else if(k.equals("−"))s=String.valueOf(Math.max(0,num(s)-1));else if(k.equals("×"))s=String.valueOf(num(s)*2);else s+=k.equals(",")?".":k;e.setText(s);e.setSelection(s.length());}
