@@ -157,6 +157,7 @@ public class MainActivity extends Activity {
  TextView ticketTotal=txt("TOTAL TTC : "+eur(total()),24,green);ticketTotal.setGravity(Gravity.RIGHT);ticketTotal.setBackground(bg(0xffb4f3bf));ticket.addView(ticketTotal,new LinearLayout.LayoutParams(-1,48));ticket.addView(btn("Voir le ticket détaillé et les remises →",blue,()->show("Ticket")));
  LinearLayout calc=panel(right,"▣ Calculatrice");
  LinearLayout entry=row();calc.addView(entry);
+ JSONObject selected=find(chosenCode);
  LinearLayout fields=col();entry.addView(fields,new LinearLayout.LayoutParams(0,-2,1));
  fields.addView(txt("Qté",13,navy));qty=field("Quantité","1");fields.addView(qty);
  fields.addView(txt("Unité",13,navy));caisseUnit=spin(units);fields.addView(caisseUnit);if(selected!=null)caisseUnit.setSelection(Math.max(0,Arrays.asList(units).indexOf(selected.optString("unit"))));
