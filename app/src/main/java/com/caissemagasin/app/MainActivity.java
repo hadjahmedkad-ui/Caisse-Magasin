@@ -381,6 +381,9 @@ public class MainActivity extends Activity {
  TextView sum=txt("TOTAL À PAYER : "+eur(total()),23,green);sum.setTypeface(null,Typeface.BOLD);sum.setGravity(Gravity.CENTER);sum.setBackground(bg(0xffb4f3bf));sum.setMinHeight(62);bottomActions.addView(sum,new LinearLayout.LayoutParams(-1,62));
  Button validate=btn("Valider les articles",green,()->validateArticles());validate.setTextSize(18);validate.setMinHeight(60);bottomActions.addView(validate,new LinearLayout.LayoutParams(-1,60));
  Button back=btn("← Revenir à la caisse",blue,()->show("Caisse"));back.setTextSize(18);back.setMinHeight(60);bottomActions.addView(back,new LinearLayout.LayoutParams(-1,60));
+ // Décalage vertical de 0,80 mm du bloc récapitulatif sur la page 2.
+ android.view.View bottomOffset=new android.view.View(this);
+ body.addView(bottomOffset,new LinearLayout.LayoutParams(-1,Math.round(0.8f*getResources().getDisplayMetrics().ydpi/25.4f)));
  }
  String ticketText(){
  StringBuilder out=new StringBuilder("CAISSE MAGASIN\nTicket des articles\n");
