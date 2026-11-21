@@ -12,7 +12,7 @@ import java.util.*;
 
 public class MainActivity extends Activity {
  final int navy=0xff081b36, blue=0xff14558b, gold=0xffffd56a, green=0xff13833d;
- LinearLayout root,body,caisseCategories; TextView caisseStock; Spinner caisseUnit; EditText qty,price,codeField; String chosen="",chosenCode="";
+ LinearLayout root,body,caisseCategories; TextView caisseStock; Spinner caisseUnit; EditText qty,price,codeField,quickDiscount; Spinner quickCategory,quickProduct,quickCount; String chosen="",chosenCode="";
  ArrayList<JSONObject> products=new ArrayList<>(),cart=new ArrayList<>(),sales=new ArrayList<>();
  String[] cats={"Viandes","Poissons","Fruits & Légumes","Aliments & Épicerie","Produits laitiers & Fromages","Boissons","Boulangerie & Viennoiserie","Produits d'entretien","Bricolage","Électricité","Autres produits","Tous les produits"};
  String[] catIcons={"🥩","🐟","🥦","🛒","🧀","🥤","🥐","🧴","🛠","💡","▦","🛍"};
@@ -120,11 +120,37 @@ public class MainActivity extends Activity {
  LinearLayout left=col(),right=col();main.addView(left,new LinearLayout.LayoutParams(0,-2,1.04f));main.addView(right,new LinearLayout.LayoutParams(0,-2,1.1f));
  LinearLayout categories=panel(left,"▤ Catégories de produits");
  caisseCategories=col();categories.addView(caisseCategories);renderCaisseCategories(null);
- LinearLayout search=panel(left,"▥ Recherche rapide");
- EditText query=field("Rechercher un produit (nom ou code-barres)","");LinearLayout searchRow=row();search.addView(searchRow);add(searchRow,query,5);
- add(searchRow,btn("🔍",blue,()->{String q=query.getText().toString().trim().toLowerCase(Locale.ROOT);for(JSONObject p:products)if(p.optString("name").toLowerCase(Locale.ROOT).contains(q)||p.optString("code").toLowerCase(Locale.ROOT).equals(q)){chosen=p.optString("name");chosenCode=p.optString("code");renderCaisseCategories(p.optString("cat"));return;}toast("Produit introuvable");}),1);
- LinearLayout stock=panel(left,"▣ Stock en temps réel");
- JSONObject selected=find(chosenCode);caisseStock=txt(selected==null?"Choisissez un article":selected.optString("name")+"  •  "+selected.optDouble("stock")+" "+selected.optString("unit"),15,navy);stock.addView(caisseStock);
+ LinearLayout quick=panel(left,"▤ Sélection rapide et remise");
+ LinearLayout quickRow=row();quick.addView(quickRow);
+ quickCategory=spin(cats);add(quickRow,quickCategory,2.1f);
+ quickProduct=spin(new String[]{"Sélectionner un article"});add(quickRow,quickProduct,2.6f);
+ quickDiscount=field("Remise %","0");quickDiscount.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);add(quickRow,quickDiscount,1.1f);
+ String[] counts={"01","02","03","04","05","06","07","08","09","10"};
+ quickCount=spin(counts);add(quickRow,quickCount,0.8f);
+ add(quickRow,btn("Ajouter l'article",green,()->{
+  int pos=quickProduct.getSelectedItemPosition();
+  String cat=quickCategory.getSelectedItem().toString();
+  ArrayList<JSONObject> matches=new ArrayList<>();
+  for(JSONObject p:products)if(cat.equals("Tous les produits")||cat.equals(p.optString("cat")))matches.add(p);
+  if(pos<0||pos>=matches.size()){toast("Sélectionnez un article");return;}
+  double discount=num(quickDiscount.getText().toString());
+  if(discount<0||discount>100){toast("Remise entre 0 et 100 %");return;}
+  JSONObject p=matches.get(pos);
+  JSONObject line=item(p.optString("name"),p.optString("cat"),p.optString("code"),p.optString("unit"),0,p.optDouble("price"),0);
+  double count=quickCount.getSelectedItemPosition()+1;
+  double reserved=0;for(JSONObject old:cart)if(old.optString("code").equals(p.optString("code")))reserved+=Math.max(0,stockQty(old,p));
+  if(count+reserved>p.optDouble("stock")){toast("Stock insuffisant");return;}
+  try{line.put("qty",count);line.put("discount",discount);line.put("secondDiscount",0);}catch(Exception ex){}
+  cart.add(line);save();show("Caisse");
+ }),1.7f);
+ quickCategory.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+  public void onNothingSelected(android.widget.AdapterView<?> parent){}
+  public void onItemSelected(android.widget.AdapterView<?> parent,View v,int position,long id){
+   ArrayList<String> names=new ArrayList<>();String cat=cats[position];
+   for(JSONObject p:products)if(cat.equals("Tous les produits")||cat.equals(p.optString("cat")))names.add(p.optString("name"));
+   quickProduct.setAdapter(new ArrayAdapter<String>(MainActivity.this,android.R.layout.simple_spinner_dropdown_item,names));
+  }
+ });
  LinearLayout ticket=panel(right,"▤ Vente en cours (Ticket)");ticket.setMinimumHeight(165);
  LinearLayout headers=row();ticket.addView(headers);for(String h:new String[]{"Article","Qté","P.U.","Total"})add(headers,txt(h,13,navy),1);
  for(JSONObject c:new ArrayList<>(cart)){LinearLayout r=row();ticket.addView(r);add(r,txt(c.optString("name"),13,navy),2);add(r,txt(String.valueOf(c.optDouble("qty")),13,navy),1);add(r,txt(eur(c.optDouble("price")),13,navy),1);add(r,txt(eur(c.optDouble("qty")*c.optDouble("price")),13,navy),1);add(r,btn("✕",0xffbd172b,()->{cart.remove(c);save();show("Caisse");}),0.5f);}
@@ -315,7 +341,47 @@ public class MainActivity extends Activity {
  add(rateRow,btn("Appliquer la TVA",blue,()->{String v=rate.getText().toString().trim();if(v.isEmpty()||num(v)<0||num(v)>100){toast("Indiquez un taux de TVA entre 0 et 100 %");return;}getPreferences(0).edit().putString("taxRate",v).apply();show("Ticket");}),1);
  totals.addView(txt(getPreferences(0).getString("taxRate","").isEmpty()?"TVA : taux non défini (aucune TVA ajoutée)":"TVA calculée : "+eur(tax()),21,navy));
  TextView sum=txt("TOTAL À PAYER : "+eur(total()),25,green);sum.setTypeface(null,Typeface.BOLD);sum.setBackground(bg(0xffb4f3bf));totals.addView(sum);
- totals.addView(btn("← Revenir à la caisse",blue,()->show("Caisse")));
+ totals.addView(btn("Valider les articles",green,()->validateArticles()));totals.addView(btn("← Revenir à la caisse",blue,()->show("Caisse")));
+ }
+ String ticketText(){
+ StringBuilder out=new StringBuilder("CAISSE MAGASIN\\nTicket des articles\\n\\n");
+ for(JSONObject line:cart)out.append(line.optString("name")).append(" | ").append(line.optDouble("qty")).append(" ").append(line.optString("unit")).append(" | PU ").append(eur(line.optDouble("price"))).append(" | remise ").append(line.optDouble("discount")).append("% | 2e ").append(line.optDouble("secondDiscount")).append("% | ").append(eur(lineNet(line))).append("\\n");
+ out.append("\\nSous-total : ").append(eur(subtotal())).append("\\nTVA (").append(taxRate()).append("%) : ").append(eur(tax())).append("\\nTOTAL TTC : ").append(eur(total()));
+ return out.toString().replace("\\n","\\n");
+ }
+ void validateArticles(){
+ if(cart.isEmpty()){toast("Aucun article à valider");return;}
+ new AlertDialog.Builder(this).setTitle("Valider les articles").setItems(new String[]{"Imprimer","Enregistrer","Imprimer et enregistrer"},(dialog,choice)->{
+  if(choice==0||choice==2)printTicket();
+  if(choice==1||choice==2)saveTicketDocument();
+ }).setNegativeButton("Annuler",null).show();
+ }
+ void saveTicketDocument(){
+ android.content.Intent intent=new android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT);
+ intent.addCategory(android.content.Intent.CATEGORY_OPENABLE);intent.setType("text/plain");
+ intent.putExtra(android.content.Intent.EXTRA_TITLE,"Ticket-Caisse-Magasin-"+System.currentTimeMillis()+".txt");
+ startActivityForResult(intent,7301);
+ }
+ @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data){
+ super.onActivityResult(requestCode,resultCode,data);
+ if(requestCode==7301&&resultCode==RESULT_OK&&data!=null&&data.getData()!=null){
+  try(java.io.OutputStream stream=getContentResolver().openOutputStream(data.getData())){
+   if(stream==null)throw new java.io.IOException("Fichier inaccessible");
+   stream.write(ticketText().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+   toast("Ticket enregistré");
+  }catch(Exception e){toast("Enregistrement impossible : "+e.getMessage());}
+ }
+ }
+ void printTicket(){
+ android.webkit.WebView web=new android.webkit.WebView(this);
+ String html="<html><head><meta charset='utf-8'></head><body><pre style='font-size:15px;white-space:pre-wrap'>"+android.text.TextUtils.htmlEncode(ticketText())+"</pre></body></html>";
+ web.loadDataWithBaseURL(null,html,"text/html","UTF-8",null);
+ web.setWebViewClient(new android.webkit.WebViewClient(){
+  @Override public void onPageFinished(android.webkit.WebView view,String url){
+   android.print.PrintManager manager=(android.print.PrintManager)getSystemService(PRINT_SERVICE);
+   if(manager!=null)manager.print("Ticket Caisse Magasin",view.createPrintDocumentAdapter("Ticket Caisse Magasin"),new android.print.PrintAttributes.Builder().build());
+  }
+ });
  }
  void rapports(){LinearLayout p=panel(body,"Rapports et historique");double sum=0;for(JSONObject s:sales)sum+=s.optDouble("total");p.addView(txt("Nombre de ventes : "+sales.size()+"\nChiffre d'affaires : "+eur(sum)+"\nProduits : "+products.size(),23,navy));for(JSONObject s:sales)p.addView(txt(new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.FRANCE).format(new Date(s.optLong("time")))+" — "+s.optString("method")+" — "+eur(s.optDouble("total")),16,navy));}
  void parametres(){LinearLayout p=panel(body,"Paramètres");p.addView(txt("Les articles et les ventes sont sauvegardés localement hors ligne. Les moyens de paiement sont enregistrés, sans encaissement bancaire électronique.",19,navy));}
