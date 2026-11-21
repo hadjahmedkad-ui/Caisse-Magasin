@@ -21,7 +21,7 @@ public class MainActivity extends Activity {
  String[] units={"pièce","kg","g","L","mL","bouteille","canette","boîte","carton","sachet","pack","pack de 6","pack de 8","paquet","barquette","pot","bidon","rouleau"};
  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN);load();show("Caisse");}
  JSONObject item(String name,String cat,String code,String unit,double cost,double price,double stock){JSONObject o=new JSONObject();try{o.put("name",name);o.put("cat",cat);o.put("code",code);o.put("unit",unit);o.put("cost",cost);o.put("price",price);o.put("stock",stock);}catch(Exception e){}return o;}
- void load(){try{JSONObject d=new JSONObject(getPreferences(0).getString("data","{}"));for(String k:new String[]{"products","cart","sales"}){JSONArray a=d.optJSONArray(k);if(a==null)continue;ArrayList<JSONObject> dest=k.equals("products")?products:k.equals("cart")?cart:sales;for(int i=0;i<a.length();i++)dest.add(a.getJSONObject(i));}}catch(Exception e){} if(products.isEmpty()&&getPreferences(0).getBoolean("firstLaunch",true)){seedProducts();getPreferences(0).edit().putBoolean("firstLaunch",false).apply();} if(!getPreferences(0).getBoolean("pricesClearedV1",false)){for(JSONObject p:products){if(p.optString("code").startsWith("INT")){try{p.put("price",0);}catch(Exception e){}}}save();getPreferences(0).edit().putBoolean("pricesClearedV1",true).apply();}}
+ void load(){try{JSONObject d=new JSONObject(getPreferences(0).getString("data","{}"));for(String k:new String[]{"products","cart","sales"}){JSONArray a=d.optJSONArray(k);if(a==null)continue;ArrayList<JSONObject> dest=k.equals("products")?products:k.equals("cart")?cart:sales;for(int i=0;i<a.length();i++)dest.add(a.getJSONObject(i));}}catch(Exception e){} if(products.isEmpty()&&getPreferences(0).getBoolean("firstLaunch",true)){seedProducts();getPreferences(0).edit().putBoolean("firstLaunch",false).apply();} if(!getPreferences(0).getBoolean("defaultStock100V1",false)){for(JSONObject p:products){if(p.optString("code").startsWith("INT")&&p.optDouble("stock")==0&&!p.has("initial")){try{p.put("stock",100);p.put("initial",100);}catch(Exception ex){}}}save();getPreferences(0).edit().putBoolean("defaultStock100V1",true).apply();} if(!getPreferences(0).getBoolean("pricesClearedV1",false)){for(JSONObject p:products){if(p.optString("code").startsWith("INT")){try{p.put("price",0);}catch(Exception e){}}}save();getPreferences(0).edit().putBoolean("pricesClearedV1",true).apply();}}
  void seedProducts(){
  String[][] entries={
  {"Viandes","Bœuf (steak)","kg","18.90"},{"Viandes","Bœuf haché","kg","13.90"},{"Viandes","Côte de bœuf","kg","24.90"},{"Viandes","Entrecôte","kg","25.90"},{"Viandes","Agneau","kg","22.90"},{"Viandes","Côtelettes d'agneau","kg","24.90"},{"Viandes","Merguez","kg","12.90"},{"Viandes","Chipolatas","kg","11.90"},{"Viandes","Poulet entier","kg","6.90"},{"Viandes","Blanc de poulet","kg","13.90"},{"Viandes","Cuisses de poulet","kg","8.90"},{"Viandes","Escalopes de dinde","kg","12.90"},
@@ -36,7 +36,7 @@ public class MainActivity extends Activity {
  {"Électricité","Ampoule LED","pièce","4.90"},{"Électricité","Prise","pièce","5.50"},{"Électricité","Rallonge","pièce","9.90"},{"Électricité","Pile AA","paquet","4.50"},{"Électricité","Interrupteur","pièce","6.90"},
  {"Autres produits","Sac réutilisable","pièce","1.50"},{"Autres produits","Papier cadeau","rouleau","2.20"},{"Autres produits","Pile bouton","pièce","2.90"}
  };
- int i=10001;for(String[] e:entries){JSONObject p=item(e[1],e[0],"INT"+(i++),e[2],0,0,0);products.add(p);}save();
+ int i=10001;for(String[] e:entries){JSONObject p=item(e[1],e[0],"INT"+(i++),e[2],0,0,100);try{p.put("initial",100);}catch(Exception ex){}products.add(p);}save();
  }
   void save(){try{JSONObject d=new JSONObject();d.put("products",new JSONArray(products));d.put("cart",new JSONArray(cart));d.put("sales",new JSONArray(sales));getPreferences(0).edit().putString("data",d.toString()).apply();}catch(Exception e){}}
  LinearLayout col(){LinearLayout x=new LinearLayout(this);x.setOrientation(1);return x;}
@@ -184,7 +184,7 @@ public class MainActivity extends Activity {
  for(int j=0;j<cats.length;j++){String c=cats[j];categories.addView(btn(catIcons[j]+" "+c,catColors[j],()->stockCategory(c)));}
  LinearLayout form=panel(main,"▤ Gestion du stock — ajouter un article");
  LinearLayout fields=row();form.addView(fields);
- EditText name=field("Nom de l'article",""),purchase=field("Prix d'achat (€)",""),sell=field("Prix de vente (€)",""),quantity=field("Stock initial",""),barcode=field("Code-barres","");
+ EditText name=field("Nom de l'article",""),purchase=field("Prix d'achat (€)",""),sell=field("Prix de vente (€)",""),quantity=field("Stock initial","100"),barcode=field("Code-barres","");
  Spinner cat=spin(cats),unit=spin(units);
  add(fields,name,3);add(fields,cat,2);add(fields,unit,1);add(fields,purchase,1.3f);add(fields,sell,1.3f);add(fields,quantity,1.2f);
  LinearLayout codes=row();form.addView(codes);add(codes,barcode,3);
