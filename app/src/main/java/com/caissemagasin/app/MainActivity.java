@@ -119,8 +119,8 @@ public class MainActivity extends Activity {
  add(nav,btn("☰ Menu",blue,()->show("Caisse")),1);
  add(nav,btn("← Retour",blue,()->show("Caisse")),1);
  add(nav,txt("● Hors ligne",13,Color.WHITE),2);
- ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
- body=col();body.setLayoutParams(new android.widget.ScrollView.LayoutParams(-1,-1));scroll.addView(body);
+ if(page.equals("Ticket")){body=col();root.addView(body,new LinearLayout.LayoutParams(-1,0,1));}
+ else{ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));body=col();body.setLayoutParams(new android.widget.ScrollView.LayoutParams(-1,-1));scroll.addView(body);}
  switch(page){case "Caisse":caisse();break;case "Ticket":ticketPage();break;case "Produits":produits(null);break;case "Stock":stock();break;case "Codes-barres":codes();break;case "Rapports":rapports();break;default:parametres();}
  }
  LinearLayout categoryTile(int index,Runnable action){
@@ -350,7 +350,10 @@ public class MainActivity extends Activity {
  }).show();
  }
  void ticketPage(){
- LinearLayout box=panel(body,"▤ Page 2 — Articles achetés / Ticket en cours");
+ LinearLayout listArea=col();body.addView(listArea,new LinearLayout.LayoutParams(-1,0,1));
+ ScrollView articlesScroll=new ScrollView(this);articlesScroll.setFillViewport(false);listArea.addView(articlesScroll,new LinearLayout.LayoutParams(-1,-1));
+ LinearLayout articlesContent=col();articlesScroll.addView(articlesContent,new android.widget.ScrollView.LayoutParams(-1,-2));
+ LinearLayout box=panel(articlesContent,"▤ Page 2 — Articles achetés / Ticket en cours");
  LinearLayout header=row();box.addView(header);
  for(String h:new String[]{"Article","Qté / unité","Prix unitaire TTC","Remise %","TVA","Total TTC","Actions"})add(header,txt(h,17,navy),1);
  for(JSONObject line:new ArrayList<>(cart)){
