@@ -358,10 +358,9 @@ public class MainActivity extends Activity {
  add(r,txt(line.optString("name")+(line.has("unitNumber")?" — N° "+line.optInt("unitNumber"):""),17,navy),1);
  add(r,txt(String.format(Locale.FRANCE,"%.3f",line.optDouble("qty"))+" "+line.optString("unit"),16,navy),1);
  add(r,txt(eur(line.optDouble("price")),17,navy),1);
- LinearLayout discount= row();add(r,discount,1);
- discount.addView(txt("Remise unité : "+line.optDouble("targetDiscount",0)+" %",14,navy));
- EditText pct=field("Remise %",String.valueOf(line.optDouble("discount",0)));pct.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);add(discount,pct,2);
- add(discount,btn("✓",green,()->{double d=num(pct.getText().toString());if(d<0||d>100){toast("Remise entre 0 et 100 %");return;}try{line.put("discount",d);}catch(Exception e){}save();show("Ticket");}),1);
+ LinearLayout discount=col();add(r,discount,1);
+ discount.addView(txt("Remise : "+line.optDouble("targetDiscount",0)+" %",17,navy));
+ Button changeDiscount=btn("Modifier remise",blue,()->editCartLine(line));changeDiscount.setTextSize(15);changeDiscount.setMinHeight(58);discount.addView(changeDiscount,new LinearLayout.LayoutParams(-1,58));
  add(r,txt(String.valueOf(vatFor(line)).replace(".0","")+" %",16,navy),1);
  add(r,txt(eur(lineNet(line)),18,green),1);
  LinearLayout actions=row();add(r,actions,1);
@@ -377,10 +376,21 @@ public class MainActivity extends Activity {
  totals.addView(btn("Valider les articles",green,()->validateArticles()));totals.addView(btn("← Revenir à la caisse",blue,()->show("Caisse")));
  }
  String ticketText(){
- StringBuilder out=new StringBuilder("CAISSE MAGASIN\\nTicket des articles\\n\\n");
- for(JSONObject line:cart)out.append(line.optString("name")).append(" | ").append(line.optDouble("qty")).append(" ").append(line.optString("unit")).append(" | PU ").append(eur(line.optDouble("price"))).append(" | remise ").append(line.optDouble("discount")).append("% | unité ").append(line.optInt("targetIndex",1)).append(" remise ").append(line.optDouble("targetDiscount")).append("% | 2e ").append(line.optDouble("secondDiscount")).append("% | ").append(eur(lineNet(line))).append("\\n");
- out.append("\\nSous-total TTC : ").append(eur(subtotal()));for(double vatRate:new double[]{2.1,5.5,10,20}){double amount=taxAt(vatRate);if(amount>0)out.append("\\nDont TVA ").append(vatRate).append("% : ").append(eur(amount));}out.append("\\nTVA incluse : ").append(eur(tax())).append("\\nTOTAL TTC : ").append(eur(total()));
- return out.toString().replace("\\n","\\n");
+ StringBuilder out=new StringBuilder("CAISSE MAGASIN\nTicket des articles\n");
+ out.append(new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.FRANCE).format(new Date())).append("\n--------------------------------\n");
+ for(JSONObject line:cart){
+  out.append(line.optString("name"));
+  if(line.has("unitNumber"))out.append(" N° ").append(line.optInt("unitNumber"));
+  out.append("\n").append(line.optDouble("qty")).append(" ").append(line.optString("unit")).append(" x ").append(eur(line.optDouble("price"))).append("    ").append(eur(lineNet(line))).append("\n");
+  if(line.optDouble("targetDiscount")>0)out.append("Remise unité : ").append(line.optDouble("targetDiscount")).append("%\n");
+  if(line.optDouble("discount")>0)out.append("Remise générale : ").append(line.optDouble("discount")).append("%\n");
+ }
+ out.append("--------------------------------\n");
+ out.append("TOTAL TTC : ").append(eur(total())).append("\n");
+ for(double vatRate:new double[]{2.1,5.5,10,20}){double amount=taxAt(vatRate);if(amount>0)out.append("Dont TVA ").append(vatRate).append("% : ").append(eur(amount)).append("\n");}
+ out.append("TVA incluse : ").append(eur(tax())).append("\n");
+ out.append("\nMerci de votre visite\n");
+ return out.toString();
  }
  void validateArticles(){
  if(cart.isEmpty()){toast("Aucun article à valider");return;}
@@ -407,12 +417,16 @@ public class MainActivity extends Activity {
  }
  void printTicket(){
  android.webkit.WebView web=new android.webkit.WebView(this);
- String html="<html><head><meta charset='utf-8'></head><body><pre style='font-size:15px;white-space:pre-wrap'>"+android.text.TextUtils.htmlEncode(ticketText())+"</pre></body></html>";
+ String html="<html><head><meta charset='utf-8'><style>@page{size:80mm auto;margin:3mm}html,body{margin:0;padding:0;background:white;color:black}body{font-family:monospace;font-size:12pt;line-height:1.45}pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}</style></head><body><pre>"+android.text.TextUtils.htmlEncode(ticketText())+"</pre></body></html>";
  web.loadDataWithBaseURL(null,html,"text/html","UTF-8",null);
  web.setWebViewClient(new android.webkit.WebViewClient(){
   @Override public void onPageFinished(android.webkit.WebView view,String url){
    android.print.PrintManager manager=(android.print.PrintManager)getSystemService(PRINT_SERVICE);
-   if(manager!=null)manager.print("Ticket Caisse Magasin",view.createPrintDocumentAdapter("Ticket Caisse Magasin"),new android.print.PrintAttributes.Builder().build());
+   if(manager!=null){
+    android.print.PrintAttributes.MediaSize receipt=new android.print.PrintAttributes.MediaSize("RECEIPT_80MM","Ticket 80 mm",3150,11693);
+    android.print.PrintAttributes attrs=new android.print.PrintAttributes.Builder().setMediaSize(receipt).setColorMode(android.print.PrintAttributes.COLOR_MODE_MONOCHROME).build();
+    manager.print("Ticket Caisse Magasin",view.createPrintDocumentAdapter("Ticket Caisse Magasin"),attrs);
+   }
   }
  });
  }
