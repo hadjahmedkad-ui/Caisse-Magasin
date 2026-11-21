@@ -17,6 +17,7 @@ public class MainActivity extends Activity {
  String[] cats={"Viandes","Poissons","Fruits & Légumes","Aliments & Épicerie","Produits laitiers & Fromages","Boissons","Boulangerie & Viennoiserie","Produits d'entretien","Bricolage","Électricité","Autres produits","Tous les produits"};
  String[] catIcons={"🥩","🐟","🥦","🛒","🧀","🥤","🥐","🧴","🛠","💡","▦","🛍"};
  int[] catColors={0xffad1723,0xff1669a5,0xff258535,0xffdb8a00,0xffd19b16,0xffd43327,0xffa85718,0xff168e9b,0xffbd741e,0xff244d9b,0xff304f86,0xffdf9a06};
+ String productIcon(String name){String n=name.toLowerCase(Locale.ROOT);if(n.contains("bœuf")||n.contains("steak")||n.contains("entrecôte"))return "🥩";if(n.contains("poulet")||n.contains("dinde"))return "🍗";if(n.contains("agneau")||n.contains("merguez")||n.contains("chipolata"))return "🥓";if(n.contains("saumon")||n.contains("thon")||n.contains("cabillaud")||n.contains("sardine")||n.contains("dorade"))return "🐟";if(n.contains("crevette"))return "🦐";if(n.contains("pomme")||n.contains("orange")||n.contains("banane")||n.contains("fraise"))return "🍎";if(n.contains("tomate")||n.contains("carotte")||n.contains("salade"))return "🥬";if(n.contains("lait")||n.contains("yaourt"))return "🥛";if(n.contains("fromage")||n.contains("emmental")||n.contains("camembert"))return "🧀";if(n.contains("baguette")||n.contains("pain"))return "🥖";if(n.contains("croissant"))return "🥐";if(n.contains("eau")||n.contains("jus")||n.contains("soda"))return "🥤";if(n.contains("lessive")||n.contains("nettoyant"))return "🧴";if(n.contains("ampoule"))return "💡";return "🛒";}
  String[] units={"pièce","kg","g","L","mL","bouteille","canette","boîte","carton","sachet","pack","paquet","barquette","pot","bidon","rouleau"};
  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN);load();show("Caisse");}
  JSONObject item(String name,String cat,String code,String unit,double cost,double price,double stock){JSONObject o=new JSONObject();try{o.put("name",name);o.put("cat",cat);o.put("code",code);o.put("unit",unit);o.put("cost",cost);o.put("price",price);o.put("stock",stock);}catch(Exception e){}return o;}
@@ -40,11 +41,13 @@ public class MainActivity extends Activity {
   void save(){try{JSONObject d=new JSONObject();d.put("products",new JSONArray(products));d.put("cart",new JSONArray(cart));d.put("sales",new JSONArray(sales));getPreferences(0).edit().putString("data",d.toString()).apply();}catch(Exception e){}}
  LinearLayout col(){LinearLayout x=new LinearLayout(this);x.setOrientation(1);return x;}
  LinearLayout row(){LinearLayout x=new LinearLayout(this);x.setOrientation(0);return x;}
- GradientDrawable bg(int c){GradientDrawable g=new GradientDrawable();g.setColor(c);g.setCornerRadius(12);g.setStroke(1,0xff9fb2c9);return g;}
- TextView txt(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextColor(color);t.setTextSize(size);t.setPadding(6,6,6,6);return t;}
- Button btn(String s,int c,Runnable action){Button b=new Button(this);b.setAllCaps(false);b.setText(s);b.setTextSize(13);b.setMinHeight(0);b.setMinimumHeight(0);b.setTextColor(Color.WHITE);b.setBackground(bg(c));b.setPadding(5,6,5,6);b.setOnClickListener(v->action.run());return b;}
+ int lighten(int c){return Color.rgb(Math.min(255,Color.red(c)+20),Math.min(255,Color.green(c)+20),Math.min(255,Color.blue(c)+20));}
+ int shade(int c){return Color.rgb(Math.max(0,Color.red(c)-18),Math.max(0,Color.green(c)-18),Math.max(0,Color.blue(c)-18));}
+ GradientDrawable bg(int c){GradientDrawable g=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{lighten(c),c,shade(c)});g.setCornerRadius(10);g.setStroke(1,0xffa9b9cc);return g;}
+ TextView txt(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextColor(color);t.setTextSize(size);t.setPadding(5,5,5,5);return t;}
+ Button btn(String s,int c,Runnable action){Button b=new Button(this);b.setAllCaps(false);b.setText(s);b.setTextSize(12);b.setMinHeight(0);b.setMinimumHeight(0);b.setTextColor(Color.WHITE);b.setBackground(bg(c));b.setPadding(5,6,5,6);b.setOnClickListener(v->action.run());return b;}
  void add(LinearLayout p,View v,float w){p.addView(v,new LinearLayout.LayoutParams(0,-2,w));}
- LinearLayout panel(LinearLayout p,String title){LinearLayout x=col();x.setPadding(8,8,8,8);x.setBackground(bg(0xfff1f6fc));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(5,5,5,5);p.addView(x,lp);TextView h=txt(title,21,Color.WHITE);h.setTypeface(null,Typeface.BOLD);h.setBackground(bg(navy));x.addView(h);return x;}
+ LinearLayout panel(LinearLayout p,String title){LinearLayout x=col();x.setPadding(5,5,5,5);x.setBackground(bg(0xffe9f1fb));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(5,5,5,5);p.addView(x,lp);TextView h=txt(title,16,Color.WHITE);h.setTypeface(null,Typeface.BOLD);h.setBackground(bg(navy));x.addView(h);return x;}
  EditText field(String hint,String val){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setText(val);e.setTextSize(18);e.setBackground(bg(Color.WHITE));e.setPadding(10,10,10,10);return e;}
  Spinner spin(String[] a){Spinner s=new Spinner(this);s.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,a));return s;}
  double num(String s){try{return Double.parseDouble(s.replace(',','.'));}catch(Exception e){return 0;}}
@@ -114,7 +117,7 @@ public class MainActivity extends Activity {
  if(category!=null&&!category.equals(p.optString("cat")))continue;
  if(count%3==0){grid=row();list.addView(grid);}
  count++;
- String label="▣\n"+p.optString("name")+"\n"+(p.optDouble("price")>0?eur(p.optDouble("price")):"Prix à saisir")+" / "+p.optString("unit");
+ String label=productIcon(p.optString("name"))+"\n"+p.optString("name")+"\n"+(p.optDouble("price")>0?eur(p.optDouble("price")):"Prix à saisir")+" / "+p.optString("unit");
  int color=catColors[Math.max(0,Arrays.asList(cats).indexOf(p.optString("cat")))];
  add(grid,btn(label,color,()->{chosen=p.optString("name");chosenCode=p.optString("code");produits(category);}),1);
  }
