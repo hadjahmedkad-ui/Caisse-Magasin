@@ -65,8 +65,45 @@ public class MainActivity extends Activity {
  LinearLayout pay=panel(right,"Moyens de paiement");LinearLayout r=row();pay.addView(r);String[] methods={"Carte bancaire","Espèces","Chèque bancaire","Chèque restaurant"};int[] payColors={0xff1954d2,0xff159c2d,0xff852ac3,0xffef7900};for(int j=0;j<methods.length;j++){String method=methods[j];add(r,btn(method,payColors[j],()->pay(method)),1);}}
  void key(String k){if(k.equals("Ajouter")){double q=num(qty.getText().toString()),p=num(price.getText().toString());if(q<=0||p<0){toast("Quantité ou prix incorrect");return;}JSONObject selected=find(chosenCode);if(selected!=null){double existing=0;for(JSONObject c:cart)if(c.optString("code").equals(chosenCode))existing+=c.optDouble("qty");if(q+existing>selected.optDouble("stock")){toast("Stock insuffisant");return;}}JSONObject c=item(chosen.isEmpty()?"Article manuel":chosen,"",chosenCode,"pièce",0,p,0);try{c.put("qty",q);}catch(Exception e){}cart.add(c);save();show("Caisse");return;}
  EditText e=qty.hasFocus()?qty:price;String s=e.getText().toString();if(k.equals("←"))s=s.isEmpty()?"":s.substring(0,s.length()-1);else if(k.equals("+"))s=String.valueOf(num(s)+1);else if(k.equals("−"))s=String.valueOf(Math.max(0,num(s)-1));else if(k.equals("×"))s=String.valueOf(num(s)*2);else s+=k.equals(",")?".":k;e.setText(s);e.setSelection(s.length());}
- void produits(String category){body.removeAllViews();LinearLayout filter=panel(body,"Sélection des produits");LinearLayout catsRow=row();filter.addView(catsRow);for(int j=0;j<cats.length;j++){String c=cats[j];add(catsRow,btn(catIcons[j]+"\n"+c,catColors[j],()->produits(c.equals("Tous les produits")?null:c)),1);}
- LinearLayout list=panel(body,category==null?"Tous les produits":category);int count=0;LinearLayout grid=null;for(JSONObject p:products){if(category!=null&&!category.equals(p.optString("cat")))continue;if(count%4==0){grid=row();list.addView(grid);}count++;String label=p.optString("name")+"\n"+eur(p.optDouble("price"))+" / "+p.optString("unit")+"\nStock : "+p.optDouble("stock");add(grid,btn(label,catColors[Math.max(0,Arrays.asList(cats).indexOf(p.optString("cat")))],()->{chosen=p.optString("name");chosenCode=p.optString("code");show("Caisse");}),1);}if(count==0)list.addView(txt("Aucun produit dans cette catégorie.",18,navy));}
+ void produits(String category){
+ body.removeAllViews();
+ LinearLayout layout=row();body.addView(layout);
+ LinearLayout side=col(),center=col(),details=col();
+ layout.addView(side,new LinearLayout.LayoutParams(0,-2,1.5f));
+ layout.addView(center,new LinearLayout.LayoutParams(0,-2,4.3f));
+ layout.addView(details,new LinearLayout.LayoutParams(0,-2,2.2f));
+ LinearLayout menu=panel(side,"Catégories");
+ for(int j=0;j<cats.length;j++){String c=cats[j];menu.addView(btn(catIcons[j]+" "+c,catColors[j],()->produits(c.equals("Tous les produits")?null:c)));}
+ LinearLayout list=panel(center,"Produits — "+(category==null?"Tous les produits":category));
+ int count=0;LinearLayout grid=null;
+ for(JSONObject p:products){
+ if(category!=null&&!category.equals(p.optString("cat")))continue;
+ if(count%3==0){grid=row();list.addView(grid);}
+ count++;
+ String label="▣\n"+p.optString("name")+"\n"+eur(p.optDouble("price"))+" / "+p.optString("unit");
+ int color=catColors[Math.max(0,Arrays.asList(cats).indexOf(p.optString("cat")))];
+ add(grid,btn(label,color,()->{chosen=p.optString("name");chosenCode=p.optString("code");produits(category);}),1);
+ }
+ if(count==0)list.addView(txt("Aucun produit dans cette catégorie.",18,navy));
+ LinearLayout selection=panel(details,"Article sélectionné");
+ JSONObject p=find(chosenCode);
+ if(p==null){selection.addView(txt("Touchez un produit pour le sélectionner.",18,navy));return;}
+ selection.addView(txt(p.optString("name"),23,navy));
+ selection.addView(txt("Prix unitaire : "+eur(p.optDouble("price"))+" / "+p.optString("unit"),19,green));
+ selection.addView(txt("Stock actuel : "+p.optDouble("stock")+" "+p.optString("unit"),17,navy));
+ EditText amount=field("Quantité","1");selection.addView(amount);
+ selection.addView(btn("−",blue,()->amount.setText(String.valueOf(Math.max(0,num(amount.getText().toString())-1)))));
+ selection.addView(btn("+",blue,()->amount.setText(String.valueOf(num(amount.getText().toString())+1))));
+ selection.addView(btn("🛒 Ajouter à la vente",green,()->{
+ double q=num(amount.getText().toString());if(q<=0){toast("Quantité incorrecte");return;}
+ double reserved=0;for(JSONObject c:cart)if(c.optString("code").equals(p.optString("code")))reserved+=c.optDouble("qty");
+ if(q+reserved>p.optDouble("stock")){toast("Stock insuffisant : renseignez le stock réel dans Stock");return;}
+ JSONObject line=item(p.optString("name"),p.optString("cat"),p.optString("code"),p.optString("unit"),p.optDouble("cost"),p.optDouble("price"),0);
+ try{line.put("qty",q);}catch(Exception e){}
+ cart.add(line);save();show("Caisse");
+ }));
+ LinearLayout bottom=panel(body,"Stock — "+p.optString("cat"));bottom.addView(txt("Stock initial et mouvements à renseigner dans l'inventaire | Stock disponible : "+p.optDouble("stock")+" "+p.optString("unit"),16,navy));
+ }
  void stock(){LinearLayout form=panel(body,"Gestion du stock et création de produits");EditText name=field("Nom de l'article",""),purchase=field("Prix d'achat",""),sell=field("Prix de vente",""),quantity=field("Stock initial",""),barcode=field("Code-barres","");Spinner cat=spin(cats),unit=spin(units);form.addView(name);form.addView(cat);form.addView(unit);form.addView(purchase);form.addView(sell);form.addView(quantity);form.addView(barcode);form.addView(btn("Générer un code interne",blue,()->barcode.setText("29"+System.currentTimeMillis())),new LinearLayout.LayoutParams(-1,-2));form.addView(btn("Enregistrer le produit",green,()->{String n=name.getText().toString().trim(),b=barcode.getText().toString().trim();if(n.isEmpty()||b.isEmpty()||find(b)!=null){toast("Nom ou code manquant, ou code déjà utilisé");return;}double q=num(quantity.getText().toString()),pr=num(sell.getText().toString()),co=num(purchase.getText().toString());if(q<0||pr<0||co<0){toast("Valeur négative interdite");return;}products.add(item(n,cat.getSelectedItem().toString(),b,unit.getSelectedItem().toString(),co,pr,q));save();show("Stock");}));
  LinearLayout list=panel(body,"Inventaire / sorties");for(JSONObject p:products){LinearLayout r=row();list.addView(r);add(r,txt(p.optString("name")+" | "+p.optString("code")+" | "+eur(p.optDouble("price"))+" | Reste "+p.optDouble("stock")+" "+p.optString("unit"),17,navy),4);add(r,btn("Modifier",blue,()->edit(p)),1);}}
  void edit(JSONObject p){LinearLayout form=panel(body,"Modifier : "+p.optString("name"));EditText pr=field("Prix",String.valueOf(p.optDouble("price"))),q=field("Stock",String.valueOf(p.optDouble("stock")));form.addView(pr);form.addView(q);form.addView(btn("Sauvegarder",green,()->{try{p.put("price",num(pr.getText().toString()));p.put("stock",num(q.getText().toString()));}catch(Exception e){}save();show("Stock");}));}
