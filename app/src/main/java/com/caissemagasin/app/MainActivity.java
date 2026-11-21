@@ -58,7 +58,7 @@ public class MainActivity extends Activity {
  void show(String page){
  root=col();root.setBackgroundColor(0xffd5e2f1);setContentView(root);
  LinearLayout top=row();top.setBackgroundColor(0xff061629);root.addView(top);
- add(top,txt("🛒 Grand Magasin",22,gold),2.4f);
+ add(top,txt("🛒 Caisse Magasin",22,gold),2.4f);
  String[] pages={"Caisse","Stock","Produits","Codes-barres","Rapports","Paramètres"};
  String[] symbols={"▣","▤","▦","▥","▥","⚙"};
  for(int i=0;i<pages.length;i++){String n=pages[i];add(top,btn(symbols[i]+"\n"+n,n.equals(page)?0xff087bd3:0xff061629,()->show(n)),1);}
@@ -100,7 +100,7 @@ public class MainActivity extends Activity {
  int[] payColors={0xff1954d2,0xff159c2d,0xff852ac3,0xffef7900};
  for(int j=0;j<methods.length;j++){String method=methods[j];add(r,btn(icons[j]+"\n"+method,payColors[j],()->pay(method)),1);}
  }
- void key(String k){if(k.equals("Ajouter")){double q=num(qty.getText().toString()),p=num(price.getText().toString());if(q<=0||p<0){toast("Quantité ou prix incorrect");return;}JSONObject selected=find(chosenCode);if(selected!=null){double existing=0;for(JSONObject c:cart)if(c.optString("code").equals(chosenCode))existing+=c.optDouble("qty");if(q+existing>selected.optDouble("stock")){toast("Stock insuffisant");return;}}JSONObject c=item(chosen.isEmpty()?"Article manuel":chosen,"",chosenCode,"pièce",0,p,0);try{c.put("qty",q);}catch(Exception e){}cart.add(c);save();show("Caisse");return;}
+ void key(String k){if(k.equals("Ajouter")){double q=num(qty.getText().toString()),p=num(price.getText().toString());if(q<=0||p<0||price.getText().toString().trim().isEmpty()){toast("Saisir une quantité et un prix valides");return;}JSONObject selected=find(chosenCode);if(selected!=null){double existing=0;for(JSONObject c:cart)if(c.optString("code").equals(chosenCode))existing+=c.optDouble("qty");if(q+existing>selected.optDouble("stock")){toast("Stock insuffisant");return;}}JSONObject c=item(chosen.isEmpty()?"Article manuel":chosen,selected==null?"":selected.optString("cat"),chosenCode,selected==null?"pièce":selected.optString("unit"),0,p,0);try{c.put("qty",q);}catch(Exception e){}cart.add(c);save();show("Caisse");return;}
  EditText e=qty.hasFocus()?qty:price;String s=e.getText().toString();if(k.equals("←"))s=s.isEmpty()?"":s.substring(0,s.length()-1);else if(k.equals("+"))s=String.valueOf(num(s)+1);else if(k.equals("−"))s=String.valueOf(Math.max(0,num(s)-1));else if(k.equals("×"))s=String.valueOf(num(s)*2);else s+=k.equals(",")?".":k;e.setText(s);e.setSelection(s.length());}
  void produits(String category){
  body.removeAllViews();
