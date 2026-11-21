@@ -20,7 +20,7 @@ public class MainActivity extends Activity {
  String[] units={"pièce","kg","g","L","mL","bouteille","canette","boîte","carton","sachet","pack","paquet","barquette","pot","bidon","rouleau"};
  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN);load();show("Caisse");}
  JSONObject item(String name,String cat,String code,String unit,double cost,double price,double stock){JSONObject o=new JSONObject();try{o.put("name",name);o.put("cat",cat);o.put("code",code);o.put("unit",unit);o.put("cost",cost);o.put("price",price);o.put("stock",stock);}catch(Exception e){}return o;}
- void load(){try{JSONObject d=new JSONObject(getPreferences(0).getString("data","{}"));for(String k:new String[]{"products","cart","sales"}){JSONArray a=d.optJSONArray(k);if(a==null)continue;ArrayList<JSONObject> dest=k.equals("products")?products:k.equals("cart")?cart:sales;for(int i=0;i<a.length();i++)dest.add(a.getJSONObject(i));}}catch(Exception e){} if(products.isEmpty()&&getPreferences(0).getBoolean("firstLaunch",true)){seedProducts();getPreferences(0).edit().putBoolean("firstLaunch",false).apply();}}
+ void load(){try{JSONObject d=new JSONObject(getPreferences(0).getString("data","{}"));for(String k:new String[]{"products","cart","sales"}){JSONArray a=d.optJSONArray(k);if(a==null)continue;ArrayList<JSONObject> dest=k.equals("products")?products:k.equals("cart")?cart:sales;for(int i=0;i<a.length();i++)dest.add(a.getJSONObject(i));}}catch(Exception e){} if(products.isEmpty()&&getPreferences(0).getBoolean("firstLaunch",true)){seedProducts();getPreferences(0).edit().putBoolean("firstLaunch",false).apply();} if(!getPreferences(0).getBoolean("pricesClearedV1",false)){for(JSONObject p:products){if(p.optString("code").startsWith("INT")){try{p.put("price",0);}catch(Exception e){}}}save();getPreferences(0).edit().putBoolean("pricesClearedV1",true).apply();}}
  void seedProducts(){
  String[][] entries={
  {"Viandes","Bœuf (steak)","kg","18.90"},{"Viandes","Bœuf haché","kg","13.90"},{"Viandes","Côte de bœuf","kg","24.90"},{"Viandes","Entrecôte","kg","25.90"},{"Viandes","Agneau","kg","22.90"},{"Viandes","Côtelettes d'agneau","kg","24.90"},{"Viandes","Merguez","kg","12.90"},{"Viandes","Chipolatas","kg","11.90"},{"Viandes","Poulet entier","kg","6.90"},{"Viandes","Blanc de poulet","kg","13.90"},{"Viandes","Cuisses de poulet","kg","8.90"},{"Viandes","Escalopes de dinde","kg","12.90"},
@@ -35,14 +35,14 @@ public class MainActivity extends Activity {
  {"Électricité","Ampoule LED","pièce","4.90"},{"Électricité","Prise","pièce","5.50"},{"Électricité","Rallonge","pièce","9.90"},{"Électricité","Pile AA","paquet","4.50"},{"Électricité","Interrupteur","pièce","6.90"},
  {"Autres produits","Sac réutilisable","pièce","1.50"},{"Autres produits","Papier cadeau","rouleau","2.20"},{"Autres produits","Pile bouton","pièce","2.90"}
  };
- int i=10001;for(String[] e:entries){JSONObject p=item(e[1],e[0],"INT"+(i++),e[2],0,num(e[3]),0);products.add(p);}save();
+ int i=10001;for(String[] e:entries){JSONObject p=item(e[1],e[0],"INT"+(i++),e[2],0,0,0);products.add(p);}save();
  }
   void save(){try{JSONObject d=new JSONObject();d.put("products",new JSONArray(products));d.put("cart",new JSONArray(cart));d.put("sales",new JSONArray(sales));getPreferences(0).edit().putString("data",d.toString()).apply();}catch(Exception e){}}
  LinearLayout col(){LinearLayout x=new LinearLayout(this);x.setOrientation(1);return x;}
  LinearLayout row(){LinearLayout x=new LinearLayout(this);x.setOrientation(0);return x;}
  GradientDrawable bg(int c){GradientDrawable g=new GradientDrawable();g.setColor(c);g.setCornerRadius(12);g.setStroke(1,0xff9fb2c9);return g;}
- TextView txt(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextColor(color);t.setTextSize(size);t.setPadding(10,10,10,10);return t;}
- Button btn(String s,int c,Runnable action){Button b=new Button(this);b.setAllCaps(false);b.setText(s);b.setTextSize(15);b.setTextColor(Color.WHITE);b.setBackground(bg(c));b.setPadding(8,10,8,10);b.setOnClickListener(v->action.run());return b;}
+ TextView txt(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextColor(color);t.setTextSize(size);t.setPadding(6,6,6,6);return t;}
+ Button btn(String s,int c,Runnable action){Button b=new Button(this);b.setAllCaps(false);b.setText(s);b.setTextSize(13);b.setMinHeight(0);b.setMinimumHeight(0);b.setTextColor(Color.WHITE);b.setBackground(bg(c));b.setPadding(5,6,5,6);b.setOnClickListener(v->action.run());return b;}
  void add(LinearLayout p,View v,float w){p.addView(v,new LinearLayout.LayoutParams(0,-2,w));}
  LinearLayout panel(LinearLayout p,String title){LinearLayout x=col();x.setPadding(8,8,8,8);x.setBackground(bg(0xfff1f6fc));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(5,5,5,5);p.addView(x,lp);TextView h=txt(title,21,Color.WHITE);h.setTypeface(null,Typeface.BOLD);h.setBackground(bg(navy));x.addView(h);return x;}
  EditText field(String hint,String val){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setText(val);e.setTextSize(18);e.setBackground(bg(Color.WHITE));e.setPadding(10,10,10,10);return e;}
@@ -80,7 +80,7 @@ public class MainActivity extends Activity {
  if(category!=null&&!category.equals(p.optString("cat")))continue;
  if(count%3==0){grid=row();list.addView(grid);}
  count++;
- String label="▣\n"+p.optString("name")+"\n"+eur(p.optDouble("price"))+" / "+p.optString("unit");
+ String label="▣\n"+p.optString("name")+"\n"+(p.optDouble("price")>0?eur(p.optDouble("price")):"Prix à saisir")+" / "+p.optString("unit");
  int color=catColors[Math.max(0,Arrays.asList(cats).indexOf(p.optString("cat")))];
  add(grid,btn(label,color,()->{chosen=p.optString("name");chosenCode=p.optString("code");produits(category);}),1);
  }
@@ -89,16 +89,16 @@ public class MainActivity extends Activity {
  JSONObject p=find(chosenCode);
  if(p==null){selection.addView(txt("Touchez un produit pour le sélectionner.",18,navy));return;}
  selection.addView(txt(p.optString("name"),23,navy));
- selection.addView(txt("Prix unitaire : "+eur(p.optDouble("price"))+" / "+p.optString("unit"),19,green));
+ selection.addView(txt("Prix unitaire / "+p.optString("unit"),16,navy));EditText sellingPrice=field("Prix de vente à saisir",p.optDouble("price")>0?String.valueOf(p.optDouble("price")):"");selection.addView(sellingPrice);selection.addView(btn("Modifier le prix",blue,()->{double v=num(sellingPrice.getText().toString());if(sellingPrice.getText().toString().trim().isEmpty()||v<0){toast("Saisir un prix valide");return;}try{p.put("price",v);}catch(Exception e){}save();produits(category);}));
  selection.addView(txt("Stock actuel : "+p.optDouble("stock")+" "+p.optString("unit"),17,navy));
  EditText amount=field("Quantité","1");selection.addView(amount);
  selection.addView(btn("−",blue,()->amount.setText(String.valueOf(Math.max(0,num(amount.getText().toString())-1)))));
  selection.addView(btn("+",blue,()->amount.setText(String.valueOf(num(amount.getText().toString())+1))));
  selection.addView(btn("🛒 Ajouter à la vente",green,()->{
- double q=num(amount.getText().toString());if(q<=0){toast("Quantité incorrecte");return;}
+ double q=num(amount.getText().toString());if(q<=0){toast("Quantité incorrecte");return;}if(sellingPrice.getText().toString().trim().isEmpty()){toast("Saisissez le prix de vente");return;}double selectedPrice=num(sellingPrice.getText().toString());if(selectedPrice<0){toast("Prix incorrect");return;}
  double reserved=0;for(JSONObject c:cart)if(c.optString("code").equals(p.optString("code")))reserved+=c.optDouble("qty");
  if(q+reserved>p.optDouble("stock")){toast("Stock insuffisant : renseignez le stock réel dans Stock");return;}
- JSONObject line=item(p.optString("name"),p.optString("cat"),p.optString("code"),p.optString("unit"),p.optDouble("cost"),p.optDouble("price"),0);
+ JSONObject line=item(p.optString("name"),p.optString("cat"),p.optString("code"),p.optString("unit"),p.optDouble("cost"),selectedPrice,0);
  try{line.put("qty",q);}catch(Exception e){}
  cart.add(line);save();show("Caisse");
  }));
