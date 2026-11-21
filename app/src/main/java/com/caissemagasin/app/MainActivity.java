@@ -52,17 +52,51 @@ public class MainActivity extends Activity {
  JSONObject find(String code){for(JSONObject p:products)if(!code.isEmpty()&&p.optString("code").equals(code))return p;return null;}
  double total(){double t=0;for(JSONObject c:cart)t+=c.optDouble("qty")*c.optDouble("price");return t;}
  void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
- void show(String page){root=col();root.setBackgroundColor(0xffdce7f3);setContentView(root);LinearLayout top=row();top.setBackgroundColor(navy);root.addView(top);add(top,txt("🛒 CAISSE MAGASIN",23,gold),2.2f);for(String n:new String[]{"Caisse","Produits","Stock","Codes-barres","Rapports","Paramètres"})add(top,btn(n,n.equals(page)?0xff267bc0:navy,()->show(n)),1);
- LinearLayout nav=row();root.addView(nav);add(nav,btn("← Retour",blue,()->show("Caisse")),1);add(nav,btn("☰ Menu",blue,()->show("Caisse")),1);
- ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));body=col();scroll.addView(body);
- switch(page){case "Caisse":caisse();break;case "Produits":produits(null);break;case "Stock":stock();break;case "Codes-barres":codes();break;case "Rapports":rapports();break;default:parametres();}}
- void caisse(){LinearLayout main=row();body.addView(main);LinearLayout left=col(),right=col();main.addView(left,new LinearLayout.LayoutParams(0,-2,1));main.addView(right,new LinearLayout.LayoutParams(0,-2,1));
- LinearLayout categories=panel(left,"Catégories");for(int i=0;i<cats.length;i+=3){LinearLayout r=row();categories.addView(r);for(int j=i;j<Math.min(i+3,cats.length);j++){String c=cats[j];add(r,btn(catIcons[j]+"\n"+c,catColors[j],()->{show("Produits");produits(c);}),1);}}
- LinearLayout stock=panel(left,"Stock sélectionné");JSONObject selected=find(chosenCode);stock.addView(txt(selected==null?"Sélectionnez un produit":selected.optString("name")+" : "+selected.optDouble("stock")+" "+selected.optString("unit"),19,navy));
- LinearLayout ticket=panel(right,"Ticket de vente");for(JSONObject c:new ArrayList<>(cart)){LinearLayout r=row();ticket.addView(r);add(r,txt(c.optString("name")+" × "+c.optDouble("qty")+" = "+eur(c.optDouble("qty")*c.optDouble("price")),17,navy),4);add(r,btn("Retirer",0xffb02d37,()->{cart.remove(c);save();show("Caisse");}),1);}ticket.addView(txt("TOTAL TTC : "+eur(total()),27,green));
- LinearLayout calc=panel(right,"Calculatrice et saisie");qty=field("Quantité","1");price=field("Prix unitaire",selected==null?"0":String.valueOf(selected.optDouble("price")));calc.addView(txt("Quantité",15,navy));calc.addView(qty);calc.addView(txt("Prix unitaire (€)",15,navy));calc.addView(price);
- String[] keys={"7","8","9","←","4","5","6","×","1","2","3","+","0",",","−","Ajouter"};for(int i=0;i<keys.length;i+=4){LinearLayout r=row();calc.addView(r);for(int j=i;j<i+4;j++){String k=keys[j];add(r,btn(k,k.equals("Ajouter")?green:navy,()->key(k)),1);}}
- LinearLayout pay=panel(right,"Moyens de paiement");LinearLayout r=row();pay.addView(r);String[] methods={"Carte bancaire","Espèces","Chèque bancaire","Chèque restaurant"};int[] payColors={0xff1954d2,0xff159c2d,0xff852ac3,0xffef7900};for(int j=0;j<methods.length;j++){String method=methods[j];add(r,btn(method,payColors[j],()->pay(method)),1);}}
+ void show(String page){
+ root=col();root.setBackgroundColor(0xffd5e2f1);setContentView(root);
+ LinearLayout top=row();top.setBackgroundColor(0xff061629);root.addView(top);
+ add(top,txt("🛒 Grand Magasin",22,gold),2.4f);
+ String[] pages={"Caisse","Stock","Produits","Codes-barres","Rapports","Paramètres"};
+ String[] symbols={"▣","▤","▦","▥","▥","⚙"};
+ for(int i=0;i<pages.length;i++){String n=pages[i];add(top,btn(symbols[i]+"\n"+n,n.equals(page)?0xff087bd3:0xff061629,()->show(n)),1);}
+ LinearLayout nav=row();nav.setBackgroundColor(0xff0b315b);root.addView(nav);
+ add(nav,btn("☰ Menu",blue,()->show("Caisse")),1);
+ add(nav,btn("← Retour",blue,()->show("Caisse")),1);
+ add(nav,txt("● Hors ligne  |  Caisse Magasin",13,Color.WHITE),3);
+ ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+ body=col();scroll.addView(body);
+ switch(page){case "Caisse":caisse();break;case "Produits":produits(null);break;case "Stock":stock();break;case "Codes-barres":codes();break;case "Rapports":rapports();break;default:parametres();}
+ }
+ void caisse(){
+ LinearLayout main=row();body.addView(main);
+ LinearLayout left=col(),right=col();main.addView(left,new LinearLayout.LayoutParams(0,-2,1.04f));main.addView(right,new LinearLayout.LayoutParams(0,-2,1.1f));
+ LinearLayout categories=panel(left,"▤ Catégories de produits");
+ for(int i=0;i<cats.length;i+=4){LinearLayout r=row();categories.addView(r);for(int j=i;j<Math.min(i+4,cats.length);j++){String c=cats[j];int color=catColors[j];add(r,btn(catIcons[j]+"\n"+c,color,()->{show("Produits");produits(c.equals("Tous les produits")?null:c);}),1);}}
+ LinearLayout search=panel(left,"▥ Recherche rapide");
+ EditText query=field("Rechercher un produit (nom ou code-barres)","");search.addView(query);
+ search.addView(btn("🔍 Rechercher",blue,()->{String q=query.getText().toString().trim().toLowerCase(Locale.ROOT);for(JSONObject p:products)if(p.optString("name").toLowerCase(Locale.ROOT).contains(q)||p.optString("code").toLowerCase(Locale.ROOT).equals(q)){chosen=p.optString("name");chosenCode=p.optString("code");show("Produits");return;}toast("Produit introuvable");}));
+ LinearLayout stock=panel(left,"▣ Stock en temps réel");
+ JSONObject selected=find(chosenCode);stock.addView(txt(selected==null?"Choisissez un article":selected.optString("name")+"  •  "+selected.optDouble("stock")+" "+selected.optString("unit"),15,navy));
+ LinearLayout ticket=panel(right,"▤ Ticket de vente (en cours)");
+ LinearLayout headers=row();ticket.addView(headers);for(String h:new String[]{"Article","Qté","P.U.","Total"})add(headers,txt(h,13,navy),1);
+ for(JSONObject c:new ArrayList<>(cart)){LinearLayout r=row();ticket.addView(r);add(r,txt(c.optString("name"),13,navy),2);add(r,txt(String.valueOf(c.optDouble("qty")),13,navy),1);add(r,txt(eur(c.optDouble("price")),13,navy),1);add(r,txt(eur(c.optDouble("qty")*c.optDouble("price")),13,navy),1);add(r,btn("✕",0xffbd172b,()->{cart.remove(c);save();show("Caisse");}),0.5f);}
+ ticket.addView(txt("TOTAL TTC : "+eur(total()),21,green));
+ LinearLayout calc=panel(right,"▣ Calculatrice");
+ LinearLayout entry=row();calc.addView(entry);
+ LinearLayout fields=col();entry.addView(fields,new LinearLayout.LayoutParams(0,-2,1));
+ fields.addView(txt("Qté",13,navy));qty=field("Quantité","1");fields.addView(qty);
+ fields.addView(txt("Prix unitaire",13,navy));price=field("Prix à saisir",selected==null||selected.optDouble("price")==0?"":String.valueOf(selected.optDouble("price")));fields.addView(price);
+ fields.addView(txt("Total article : "+eur(selected==null?0:selected.optDouble("price")),13,navy));
+ LinearLayout keypad=col();entry.addView(keypad,new LinearLayout.LayoutParams(0,-2,2));
+ String[] keys={"7","8","9","←","4","5","6","×","1","2","3","+","0",",","−","Ajouter"};
+ for(int i=0;i<keys.length;i+=4){LinearLayout r=row();keypad.addView(r);for(int j=i;j<i+4;j++){String k=keys[j];add(r,btn(k,k.equals("Ajouter")?green:navy,()->key(k)),1);}}
+ LinearLayout pay=panel(right,"▣ Paiement");
+ LinearLayout r=row();pay.addView(r);
+ String[] methods={"Carte bancaire","Espèces","Chèque bancaire","Chèque restaurant"};
+ String[] icons={"▣","▤","▥","▦"};
+ int[] payColors={0xff1954d2,0xff159c2d,0xff852ac3,0xffef7900};
+ for(int j=0;j<methods.length;j++){String method=methods[j];add(r,btn(icons[j]+"\n"+method,payColors[j],()->pay(method)),1);}
+ }
  void key(String k){if(k.equals("Ajouter")){double q=num(qty.getText().toString()),p=num(price.getText().toString());if(q<=0||p<0){toast("Quantité ou prix incorrect");return;}JSONObject selected=find(chosenCode);if(selected!=null){double existing=0;for(JSONObject c:cart)if(c.optString("code").equals(chosenCode))existing+=c.optDouble("qty");if(q+existing>selected.optDouble("stock")){toast("Stock insuffisant");return;}}JSONObject c=item(chosen.isEmpty()?"Article manuel":chosen,"",chosenCode,"pièce",0,p,0);try{c.put("qty",q);}catch(Exception e){}cart.add(c);save();show("Caisse");return;}
  EditText e=qty.hasFocus()?qty:price;String s=e.getText().toString();if(k.equals("←"))s=s.isEmpty()?"":s.substring(0,s.length()-1);else if(k.equals("+"))s=String.valueOf(num(s)+1);else if(k.equals("−"))s=String.valueOf(Math.max(0,num(s)-1));else if(k.equals("×"))s=String.valueOf(num(s)*2);else s+=k.equals(",")?".":k;e.setText(s);e.setSelection(s.length());}
  void produits(String category){
