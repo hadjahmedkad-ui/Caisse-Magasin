@@ -274,7 +274,7 @@ public class MainActivity extends Activity {
  int start=Math.max(0,sales.size()-10);
  for(int i=sales.size()-1;i>=start;i--){JSONObject sale=sales.get(i);history.addView(txt(new java.text.SimpleDateFormat("dd/MM HH:mm",Locale.FRANCE).format(new Date(sale.optLong("time")))+"  "+sale.optString("method")+"  "+eur(sale.optDouble("total")),14,navy));}
  }
- void pay(String method){if(cart.isEmpty()){toast("Ticket vide");return;}new AlertDialog.Builder(this).setTitle("Confirmer le règlement").setMessage(method+" — "+eur(total())).setNegativeButton("Annuler",null).setPositiveButton("Valider",(d,w)->{HashMap<String,Double> used=new HashMap<>();for(JSONObject c:cart){String code=c.optString("code");if(!code.isEmpty())used.put(code,used.getOrDefault(code,0.0)+Math.max(0,stockQty(c,find(code))));}for(String code:used.keySet()){JSONObject p=find(code);if(p==null||p.optDouble("stock")<used.get(code)){toast("Stock insuffisant : "+code);return;}}for(String code:used.keySet()){JSONObject p=find(code);try{p.put("stock",p.optDouble("stock")-used.get(code));}catch(Exception e){}}JSONObject s=new JSONObject();try{s.put("time",System.currentTimeMillis());s.put("method",method);s.put("total",total());s.put("items",new JSONArray(cart));}catch(Exception e){}sales.add(s);cart.clear();save();show("Caisse");toast("Vente enregistrée");}).show();}
+ void pay(String method){if(cart.isEmpty()){toast("Ticket vide");return;}new AlertDialog.Builder(this).setTitle("Confirmer le règlement").setMessage(method+" — "+eur(total())).setNegativeButton("Annuler",null).setPositiveButton("Valider",(d,w)->{HashMap<String,Double> used=new HashMap<>();for(JSONObject c:cart){String code=c.optString("code");if(!code.isEmpty())used.put(code,used.getOrDefault(code,0.0)+(find(code)==null?c.optDouble("qty"):Math.max(0,stockQty(c,find(code)))));}for(String code:used.keySet()){JSONObject p=find(code);if(p==null||p.optDouble("stock")<used.get(code)){toast("Stock insuffisant : "+code);return;}}for(String code:used.keySet()){JSONObject p=find(code);try{p.put("stock",p.optDouble("stock")-used.get(code));}catch(Exception e){}}JSONObject s=new JSONObject();try{s.put("time",System.currentTimeMillis());s.put("method",method);s.put("total",total());s.put("items",new JSONArray(cart));}catch(Exception e){}sales.add(s);cart.clear();save();show("Caisse");toast("Vente enregistrée");}).show();}
  void ticketPage(){
  LinearLayout box=panel(body,"▤ Page 2 — Articles achetés / Ticket en cours");
  LinearLayout header=row();box.addView(header);
@@ -296,7 +296,7 @@ public class MainActivity extends Activity {
  add(rateRow,txt("TVA (%) :",19,navy),1);
  EditText rate=field("Taux de TVA à définir",getPreferences(0).getString("taxRate",""));rate.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);add(rateRow,rate,2);
  add(rateRow,btn("Appliquer la TVA",blue,()->{String v=rate.getText().toString().trim();if(v.isEmpty()||num(v)<0||num(v)>100){toast("Indiquez un taux de TVA entre 0 et 100 %");return;}getPreferences(0).edit().putString("taxRate",v).apply();show("Ticket");}),1);
- totals.addView(txt("TVA calculée : "+eur(tax()),21,navy));
+ totals.addView(txt(getPreferences(0).getString("taxRate","").isEmpty()?"TVA : taux non défini (aucune TVA ajoutée)":"TVA calculée : "+eur(tax()),21,navy));
  TextView sum=txt("TOTAL À PAYER : "+eur(total()),25,green);sum.setTypeface(null,Typeface.BOLD);sum.setBackground(bg(0xffb4f3bf));totals.addView(sum);
  totals.addView(btn("← Revenir à la caisse",blue,()->show("Caisse")));
  }
