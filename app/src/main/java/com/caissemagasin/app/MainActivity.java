@@ -20,8 +20,16 @@ public class MainActivity extends Activity {
  String productIcon(String name){String n=name.toLowerCase(Locale.ROOT);if(n.contains("bœuf")||n.contains("steak")||n.contains("entrecôte"))return "🥩";if(n.contains("poulet")||n.contains("dinde"))return "🍗";if(n.contains("agneau")||n.contains("merguez")||n.contains("chipolata"))return "🥓";if(n.contains("saumon")||n.contains("thon")||n.contains("cabillaud")||n.contains("sardine")||n.contains("dorade"))return "🐟";if(n.contains("crevette"))return "🦐";if(n.contains("pomme")||n.contains("orange")||n.contains("banane")||n.contains("fraise"))return "🍎";if(n.contains("tomate")||n.contains("carotte")||n.contains("salade"))return "🥬";if(n.contains("lait")||n.contains("yaourt"))return "🥛";if(n.contains("fromage")||n.contains("emmental")||n.contains("camembert"))return "🧀";if(n.contains("baguette")||n.contains("pain"))return "🥖";if(n.contains("croissant"))return "🥐";if(n.contains("eau")||n.contains("jus")||n.contains("soda"))return "🥤";if(n.contains("lessive")||n.contains("nettoyant"))return "🧴";if(n.contains("ampoule"))return "💡";return "🛒";}
  String[] units={"pièce","kg","g","L","mL","bouteille","canette","boîte","carton","sachet","pack","pack de 6","pack de 8","paquet","barquette","pot","bidon","rouleau"};
  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN);load();show("Caisse");}
- JSONObject item(String name,String cat,String code,String unit,double cost,double price,double stock){JSONObject o=new JSONObject();try{o.put("name",name);o.put("cat",cat);o.put("code",code);o.put("unit",unit);o.put("cost",cost);o.put("price",price);o.put("stock",stock);}catch(Exception e){}return o;}
- void load(){try{JSONObject d=new JSONObject(getPreferences(0).getString("data","{}"));for(String k:new String[]{"products","cart","sales"}){JSONArray a=d.optJSONArray(k);if(a==null)continue;ArrayList<JSONObject> dest=k.equals("products")?products:k.equals("cart")?cart:sales;for(int i=0;i<a.length();i++)dest.add(a.getJSONObject(i));}}catch(Exception e){} if(products.isEmpty()&&getPreferences(0).getBoolean("firstLaunch",true)){seedProducts();getPreferences(0).edit().putBoolean("firstLaunch",false).apply();} if(!getPreferences(0).getBoolean("defaultStock100V1",false)){for(JSONObject p:products){if(p.optString("code").startsWith("INT")&&p.optDouble("stock")==0&&!p.has("initial")){try{p.put("stock",100);p.put("initial",100);}catch(Exception ex){}}}save();getPreferences(0).edit().putBoolean("defaultStock100V1",true).apply();} if(!getPreferences(0).getBoolean("pricesClearedV1",false)){for(JSONObject p:products){if(p.optString("code").startsWith("INT")){try{p.put("price",0);}catch(Exception e){}}}save();getPreferences(0).edit().putBoolean("pricesClearedV1",true).apply();}}
+ JSONObject item(String name,String cat,String code,String unit,double cost,double price,double stock){JSONObject o=new JSONObject();try{o.put("name",name);o.put("cat",cat);o.put("code",code);o.put("unit",unit);o.put("cost",cost);o.put("price",price);o.put("stock",stock);o.put("vat",defaultVat(cat,name));}catch(Exception e){}return o;}
+ double defaultVat(String cat,String name){
+  if(cat.equals("Viandes")||cat.equals("Poissons")||cat.equals("Fruits & Légumes")||cat.equals("Produits laitiers & Fromages")||cat.equals("Boulangerie & Viennoiserie"))return 5.5;
+  if(cat.equals("Aliments & Épicerie"))return 5.5;
+  if(cat.equals("Boissons"))return 5.5;
+  return 20.0;
+ }
+ double vatFor(JSONObject line){if(line.has("vat"))return line.optDouble("vat");JSONObject p=find(line.optString("code"));return p==null?defaultVat(line.optString("cat"),line.optString("name")):p.optDouble("vat",defaultVat(p.optString("cat"),p.optString("name")));}
+ double taxAt(double rate){double v=0;for(JSONObject line:cart)if(Math.abs(vatFor(line)-rate)<0.001)v+=lineNet(line)*rate/(100.0+rate);return v;}
+ void load(){try{JSONObject d=new JSONObject(getPreferences(0).getString("data","{}"));for(String k:new String[]{"products","cart","sales"}){JSONArray a=d.optJSONArray(k);if(a==null)continue;ArrayList<JSONObject> dest=k.equals("products")?products:k.equals("cart")?cart:sales;for(int i=0;i<a.length();i++)dest.add(a.getJSONObject(i));}}catch(Exception e){} if(products.isEmpty()&&getPreferences(0).getBoolean("firstLaunch",true)){seedProducts();getPreferences(0).edit().putBoolean("firstLaunch",false).apply();} if(!getPreferences(0).getBoolean("defaultStock100V1",false)){for(JSONObject p:products){if(p.optString("code").startsWith("INT")&&p.optDouble("stock")==0&&!p.has("initial")){try{p.put("stock",100);p.put("initial",100);}catch(Exception ex){}}}save();getPreferences(0).edit().putBoolean("defaultStock100V1",true).apply();} if(!getPreferences(0).getBoolean("pricesClearedV1",false)){for(JSONObject p:products){if(p.optString("code").startsWith("INT")){try{p.put("price",0);}catch(Exception e){}}}save();getPreferences(0).edit().putBoolean("pricesClearedV1",true).apply();}boolean vatChanged=false;for(JSONObject p:products)if(!p.has("vat")){try{p.put("vat",defaultVat(p.optString("cat"),p.optString("name")));vatChanged=true;}catch(Exception e){}}if(vatChanged)save();}
  void seedProducts(){
  String[][] entries={
  {"Viandes","Bœuf (steak)","kg","18.90"},{"Viandes","Bœuf haché","kg","13.90"},{"Viandes","Côte de bœuf","kg","24.90"},{"Viandes","Entrecôte","kg","25.90"},{"Viandes","Agneau","kg","22.90"},{"Viandes","Côtelettes d'agneau","kg","24.90"},{"Viandes","Merguez","kg","12.90"},{"Viandes","Chipolatas","kg","11.90"},{"Viandes","Poulet entier","kg","6.90"},{"Viandes","Blanc de poulet","kg","13.90"},{"Viandes","Cuisses de poulet","kg","8.90"},{"Viandes","Escalopes de dinde","kg","12.90"},
@@ -72,9 +80,8 @@ public class MainActivity extends Activity {
  return Math.max(0,afterIndividual-pairs*unitPrice*(1-discount/100.0)*second/100.0-targetReduction);
  }
  double subtotal(){double t=0;for(JSONObject c:cart)t+=lineNet(c);return t;}
- double taxRate(){return Math.max(0,Math.min(100,num(getPreferences(0).getString("taxRate","0"))));}
- double tax(){return subtotal()*taxRate()/100.0;}
- double total(){return subtotal()+tax();}
+ double tax(){double v=0;for(JSONObject line:cart){double rate=vatFor(line);v+=lineNet(line)*rate/(100.0+rate);}return v;}
+ double total(){return subtotal();}
  double stockQty(JSONObject line,JSONObject product){String u=line.optString("unit"),base=product.optString("unit");double q=line.optDouble("qty");if(u.equals(base))return q;if(u.equals("g")&&base.equals("kg"))return q/1000.0;if(u.equals("kg")&&base.equals("g"))return q*1000.0;if(u.equals("mL")&&base.equals("L"))return q/1000.0;if(u.equals("L")&&base.equals("mL"))return q*1000.0;return -1;}
  void renderCaisseCategories(String category){
  if(caisseCategories==null)return;caisseCategories.removeAllViews();
@@ -174,13 +181,13 @@ public class MainActivity extends Activity {
  for(Integer ix:pendingRemises.keySet())if(ix>q){toast("Unité n° "+ix+" supérieure à la quantité");return;}
  if(selected!=null){double existing=0;for(JSONObject c:cart)if(c.optString("code").equals(chosenCode))existing+=Math.max(0,stockQty(c,selected));double stockQ=stockQty(item("", "", "",caisseUnit.getSelectedItem().toString(),0,0,0),selected);if(stockQ<0){toast("Unité incompatible avec le stock de ce produit");return;}double factor=caisseUnit.getSelectedItem().toString().equals(selected.optString("unit"))?1:((caisseUnit.getSelectedItem().toString().equals("g")||caisseUnit.getSelectedItem().toString().equals("mL"))?0.001:1000);if(q*factor+existing>selected.optDouble("stock")){toast("Stock insuffisant");return;}}if(pendingRemises.isEmpty()){
  JSONObject c=item(chosen,selected.optString("cat"),chosenCode,selected.optString("unit"),0,p,0);
- try{c.put("qty",q);c.put("unit",caisseUnit.getSelectedItem().toString());c.put("discount",0);c.put("secondDiscount",0);c.put("targetDiscount",0);c.put("targetIndex",1);}catch(Exception e){}
+ try{c.put("vat",vatFor(selected));c.put("qty",q);c.put("unit",caisseUnit.getSelectedItem().toString());c.put("discount",0);c.put("secondDiscount",0);c.put("targetDiscount",0);c.put("targetIndex",1);}catch(Exception e){}
  cart.add(c);
  }else{
  for(int ix=1;ix<=(int)q;ix++){
  double remise=pendingRemises.containsKey(ix)?pendingRemises.get(ix):0;
  JSONObject c=item(chosen,selected.optString("cat"),chosenCode,selected.optString("unit"),0,p,0);
- try{c.put("qty",1);c.put("unit",caisseUnit.getSelectedItem().toString());c.put("discount",0);c.put("secondDiscount",0);c.put("targetDiscount",remise);c.put("targetIndex",1);c.put("unitNumber",ix);}catch(Exception e){}
+ try{c.put("vat",vatFor(selected));c.put("qty",1);c.put("unit",caisseUnit.getSelectedItem().toString());c.put("discount",0);c.put("secondDiscount",0);c.put("targetDiscount",remise);c.put("targetIndex",1);c.put("unitNumber",ix);}catch(Exception e){}
  cart.add(c);
  }
  }
@@ -210,6 +217,9 @@ public class MainActivity extends Activity {
  JSONObject p=find(chosenCode);
  if(p==null){selection.addView(txt("Touchez un produit pour le sélectionner.",18,navy));return;}
  selection.addView(txt(p.optString("name"),23,navy));
+ selection.addView(txt("TVA du produit (%)",16,navy));
+ Spinner vatChoice=spin(new String[]{"0","2.1","5.5","10","20"});double currentVat=p.optDouble("vat",defaultVat(p.optString("cat"),p.optString("name")));int vatPosition=4;double[] vatOptions={0,2.1,5.5,10,20};for(int vi=0;vi<vatOptions.length;vi++)if(Math.abs(currentVat-vatOptions[vi])<0.001)vatPosition=vi;vatChoice.setSelection(vatPosition);selection.addView(vatChoice);
+ selection.addView(btn("Enregistrer la TVA",blue,()->{try{p.put("vat",vatOptions[vatChoice.getSelectedItemPosition()]);}catch(Exception e){}save();produits(category);}));
  selection.addView(txt("Prix unitaire / "+p.optString("unit"),16,navy));EditText sellingPrice=field("Prix de vente à saisir",p.optDouble("price")>0?String.valueOf(p.optDouble("price")):"");selection.addView(sellingPrice);selection.addView(btn("Modifier le prix",blue,()->{double v=num(sellingPrice.getText().toString());if(sellingPrice.getText().toString().trim().isEmpty()||v<0){toast("Saisir un prix valide");return;}try{p.put("price",v);}catch(Exception e){}save();produits(category);}));
  selection.addView(txt("Stock actuel : "+p.optDouble("stock")+" "+p.optString("unit"),17,navy));
  EditText amount=field("Quantité","1");selection.addView(amount);
@@ -220,7 +230,7 @@ public class MainActivity extends Activity {
  double reserved=0;for(JSONObject c:cart)if(c.optString("code").equals(p.optString("code")))reserved+=c.optDouble("qty");
  if(q+reserved>p.optDouble("stock")){toast("Stock insuffisant : renseignez le stock réel dans Stock");return;}
  JSONObject line=item(p.optString("name"),p.optString("cat"),p.optString("code"),p.optString("unit"),p.optDouble("cost"),selectedPrice,0);
- try{line.put("qty",q);}catch(Exception e){}
+ try{line.put("qty",q);line.put("vat",p.optDouble("vat",defaultVat(p.optString("cat"),p.optString("name"))));}catch(Exception e){}
  cart.add(line);save();show("Caisse");
  }));
  LinearLayout bottom=panel(body,"Stock — "+p.optString("cat"));bottom.addView(txt("Stock initial et mouvements à renseigner dans l'inventaire | Stock disponible : "+p.optDouble("stock")+" "+p.optString("unit"),16,navy));
@@ -342,7 +352,7 @@ public class MainActivity extends Activity {
  void ticketPage(){
  LinearLayout box=panel(body,"▤ Page 2 — Articles achetés / Ticket en cours");
  LinearLayout header=row();box.addView(header);
- for(String h:new String[]{"Article","Qté / unité","Prix unitaire","Remise %","2ᵉ article %","Total ligne","Actions"})add(header,txt(h,17,navy),1);
+ for(String h:new String[]{"Article","Qté / unité","Prix unitaire TTC","Remise %","TVA","Total TTC","Actions"})add(header,txt(h,17,navy),1);
  for(JSONObject line:new ArrayList<>(cart)){
  LinearLayout r=row();box.addView(r);
  add(r,txt(line.optString("name")+(line.has("unitNumber")?" — N° "+line.optInt("unitNumber"):""),17,navy),1);
@@ -352,6 +362,7 @@ public class MainActivity extends Activity {
  discount.addView(txt("Remise unité : "+line.optDouble("targetDiscount",0)+" %",14,navy));
  EditText pct=field("Remise %",String.valueOf(line.optDouble("discount",0)));pct.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);add(discount,pct,2);
  add(discount,btn("✓",green,()->{double d=num(pct.getText().toString());if(d<0||d>100){toast("Remise entre 0 et 100 %");return;}try{line.put("discount",d);}catch(Exception e){}save();show("Ticket");}),1);
+ add(r,txt(String.valueOf(vatFor(line)).replace(".0","")+" %",16,navy),1);
  add(r,txt(eur(lineNet(line)),18,green),1);
  LinearLayout actions=row();add(r,actions,1);
  add(actions,btn("✕",0xffc51c2d,()->{cart.remove(line);save();show("Ticket");}),1);
@@ -360,18 +371,15 @@ public class MainActivity extends Activity {
  if(cart.isEmpty())box.addView(txt("Aucun article ajouté pour le moment.",19,navy));box.addView(txt("Promotion 2ᵉ article : réduction appliquée à chaque deuxième unité achetée du même article, pour les unités à la pièce (pas au poids ni au litre). Les remises se cumulent.",14,navy));
  LinearLayout totals=panel(body,"Total des articles, TVA et remises");
  totals.addView(txt("Sous-total après remises : "+eur(subtotal()),22,navy));
- LinearLayout rateRow=row();totals.addView(rateRow);
- add(rateRow,txt("TVA (%) :",19,navy),1);
- EditText rate=field("Taux de TVA à définir",getPreferences(0).getString("taxRate",""));rate.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);add(rateRow,rate,2);
- add(rateRow,btn("Appliquer la TVA",blue,()->{String v=rate.getText().toString().trim();if(v.isEmpty()||num(v)<0||num(v)>100){toast("Indiquez un taux de TVA entre 0 et 100 %");return;}getPreferences(0).edit().putString("taxRate",v).apply();show("Ticket");}),1);
- totals.addView(txt(getPreferences(0).getString("taxRate","").isEmpty()?"TVA : taux non défini (aucune TVA ajoutée)":"TVA calculée : "+eur(tax()),21,navy));
+ for(double vatRate:new double[]{2.1,5.5,10,20}){double base=0;for(JSONObject line:cart)if(Math.abs(vatFor(line)-vatRate)<0.001)base+=lineNet(line);if(base>0)totals.addView(txt("Dont TVA "+vatRate+" % : "+eur(taxAt(vatRate)),18,navy));}
+ totals.addView(txt("TVA incluse dans les prix TTC : "+eur(tax()),19,navy));
  TextView sum=txt("TOTAL À PAYER : "+eur(total()),25,green);sum.setTypeface(null,Typeface.BOLD);sum.setBackground(bg(0xffb4f3bf));totals.addView(sum);
  totals.addView(btn("Valider les articles",green,()->validateArticles()));totals.addView(btn("← Revenir à la caisse",blue,()->show("Caisse")));
  }
  String ticketText(){
  StringBuilder out=new StringBuilder("CAISSE MAGASIN\\nTicket des articles\\n\\n");
  for(JSONObject line:cart)out.append(line.optString("name")).append(" | ").append(line.optDouble("qty")).append(" ").append(line.optString("unit")).append(" | PU ").append(eur(line.optDouble("price"))).append(" | remise ").append(line.optDouble("discount")).append("% | unité ").append(line.optInt("targetIndex",1)).append(" remise ").append(line.optDouble("targetDiscount")).append("% | 2e ").append(line.optDouble("secondDiscount")).append("% | ").append(eur(lineNet(line))).append("\\n");
- out.append("\\nSous-total : ").append(eur(subtotal())).append("\\nTVA (").append(taxRate()).append("%) : ").append(eur(tax())).append("\\nTOTAL TTC : ").append(eur(total()));
+ out.append("\\nSous-total TTC : ").append(eur(subtotal()));for(double vatRate:new double[]{2.1,5.5,10,20}){double amount=taxAt(vatRate);if(amount>0)out.append("\\nDont TVA ").append(vatRate).append("% : ").append(eur(amount));}out.append("\\nTVA incluse : ").append(eur(tax())).append("\\nTOTAL TTC : ").append(eur(total()));
  return out.toString().replace("\\n","\\n");
  }
  void validateArticles(){
