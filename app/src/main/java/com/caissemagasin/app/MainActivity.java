@@ -87,25 +87,25 @@ public class MainActivity extends Activity {
  add(searchRow,btn("🔍",blue,()->{String q=query.getText().toString().trim().toLowerCase(Locale.ROOT);for(JSONObject p:products)if(p.optString("name").toLowerCase(Locale.ROOT).contains(q)||p.optString("code").toLowerCase(Locale.ROOT).equals(q)){chosen=p.optString("name");chosenCode=p.optString("code");show("Produits");return;}toast("Produit introuvable");}),1);
  LinearLayout stock=panel(left,"▣ Stock en temps réel");
  JSONObject selected=find(chosenCode);stock.addView(txt(selected==null?"Choisissez un article":selected.optString("name")+"  •  "+selected.optDouble("stock")+" "+selected.optString("unit"),15,navy));
- LinearLayout ticket=panel(right,"▤ Vente en cours (Ticket)");
+ LinearLayout ticket=panel(right,"▤ Vente en cours (Ticket)");ticket.setMinimumHeight(165);
  LinearLayout headers=row();ticket.addView(headers);for(String h:new String[]{"Article","Qté","P.U.","Total"})add(headers,txt(h,13,navy),1);
  for(JSONObject c:new ArrayList<>(cart)){LinearLayout r=row();ticket.addView(r);add(r,txt(c.optString("name"),13,navy),2);add(r,txt(String.valueOf(c.optDouble("qty")),13,navy),1);add(r,txt(eur(c.optDouble("price")),13,navy),1);add(r,txt(eur(c.optDouble("qty")*c.optDouble("price")),13,navy),1);add(r,btn("✕",0xffbd172b,()->{cart.remove(c);save();show("Caisse");}),0.5f);}
- TextView ticketTotal=txt("TOTAL TTC : "+eur(total()),24,green);ticketTotal.setGravity(Gravity.RIGHT);ticketTotal.setBackground(bg(0xffb4f3bf));ticket.addView(ticketTotal,new LinearLayout.LayoutParams(-1,54));
+ TextView ticketTotal=txt("TOTAL TTC : "+eur(total()),24,green);ticketTotal.setGravity(Gravity.RIGHT);ticketTotal.setBackground(bg(0xffb4f3bf));ticket.addView(ticketTotal,new LinearLayout.LayoutParams(-1,48));
  LinearLayout calc=panel(right,"▣ Calculatrice");
  LinearLayout entry=row();calc.addView(entry);
  LinearLayout fields=col();entry.addView(fields,new LinearLayout.LayoutParams(0,-2,1));
  fields.addView(txt("Qté",13,navy));qty=field("Quantité","1");fields.addView(qty);
  fields.addView(txt("Prix unitaire",13,navy));price=field("Prix à saisir",selected==null||selected.optDouble("price")==0?"":String.valueOf(selected.optDouble("price")));fields.addView(price);
  TextView lineTotal=txt("Total article : "+eur(num(qty.getText().toString())*num(price.getText().toString())),19,green);lineTotal.setBackground(bg(0xffc7f4d0));fields.addView(lineTotal);android.text.TextWatcher watcher=new android.text.TextWatcher(){public void beforeTextChanged(CharSequence a,int st,int c,int after){}public void onTextChanged(CharSequence a,int st,int before,int count){lineTotal.setText("Total article : "+eur(num(qty.getText().toString())*num(price.getText().toString())));}public void afterTextChanged(android.text.Editable e){}};qty.addTextChangedListener(watcher);price.addTextChangedListener(watcher);
- LinearLayout keypad=col();entry.addView(keypad,new LinearLayout.LayoutParams(0,-2,2));
+ LinearLayout keypad=col();entry.addView(keypad,new LinearLayout.LayoutParams(0,-2,1.7f));
  String[] keys={"7","8","9","←","4","5","6","×","1","2","3","+","0",",","−","Ajouter"};
- for(int i=0;i<keys.length;i+=4){LinearLayout r=row();keypad.addView(r);for(int j=i;j<i+4;j++){String k=keys[j];add(r,btn(k,k.equals("Ajouter")?green:navy,()->key(k)),1);}}
+ for(int i=0;i<keys.length;i+=4){LinearLayout r=row();keypad.addView(r);for(int j=i;j<i+4;j++){String k=keys[j];Button touch=btn(k,k.equals("Ajouter")?green:k.equals("←")?0xffe21c22:navy,()->key(k));touch.setTextSize(k.equals("Ajouter")?18:29);touch.setTypeface(null,Typeface.BOLD);LinearLayout.LayoutParams touchSize=new LinearLayout.LayoutParams(0,76,1);touchSize.setMargins(2,2,2,2);r.addView(touch,touchSize);}}
  LinearLayout pay=panel(right,"▣ Paiement");
  LinearLayout r=row();pay.addView(r);
  String[] methods={"Carte bancaire","Espèces","Chèque bancaire","Chèque restaurant"};
  String[] icons={"▣","▤","▥","▦"};
  int[] payColors={0xff1954d2,0xff159c2d,0xff852ac3,0xffef7900};
- for(int j=0;j<methods.length;j++){String method=methods[j];Button payment=btn(icons[j]+"\n"+method,payColors[j],()->pay(method));payment.setTextSize(17);r.addView(payment,new LinearLayout.LayoutParams(0,Math.max(92,(int)(getResources().getDisplayMetrics().heightPixels*0.13f)),1));}
+ for(int j=0;j<methods.length;j++){String method=methods[j];Button payment=btn(icons[j]+"\n"+method,payColors[j],()->pay(method));payment.setTextSize(19);payment.setTypeface(null,Typeface.BOLD);r.addView(payment,new LinearLayout.LayoutParams(0,Math.max(92,(int)(getResources().getDisplayMetrics().heightPixels*0.13f)),1));}
  }
  void key(String k){if(k.equals("Ajouter")){double q=num(qty.getText().toString()),p=num(price.getText().toString());if(q<=0||p<0||price.getText().toString().trim().isEmpty()){toast("Saisir une quantité et un prix valides");return;}JSONObject selected=find(chosenCode);if(selected!=null){double existing=0;for(JSONObject c:cart)if(c.optString("code").equals(chosenCode))existing+=c.optDouble("qty");if(q+existing>selected.optDouble("stock")){toast("Stock insuffisant");return;}}JSONObject c=item(chosen.isEmpty()?"Article manuel":chosen,selected==null?"":selected.optString("cat"),chosenCode,selected==null?"pièce":selected.optString("unit"),0,p,0);try{c.put("qty",q);}catch(Exception e){}cart.add(c);save();show("Caisse");return;}
  EditText e=qty.hasFocus()?qty:price;String s=e.getText().toString();if(k.equals("←"))s=s.isEmpty()?"":s.substring(0,s.length()-1);else if(k.equals("+"))s=String.valueOf(num(s)+1);else if(k.equals("−"))s=String.valueOf(Math.max(0,num(s)-1));else if(k.equals("×"))s=String.valueOf(num(s)*2);else s+=k.equals(",")?".":k;e.setText(s);e.setSelection(s.length());}
