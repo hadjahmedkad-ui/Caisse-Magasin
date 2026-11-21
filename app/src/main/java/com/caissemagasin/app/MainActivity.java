@@ -66,8 +66,8 @@ public class MainActivity extends Activity {
  add(nav,btn("☰ Menu",blue,()->show("Caisse")),1);
  add(nav,btn("← Retour",blue,()->show("Caisse")),1);
  add(nav,txt("● Hors ligne",13,Color.WHITE),2);
- ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
- body=col();scroll.addView(body);
+ ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+ body=col();body.setLayoutParams(new android.widget.ScrollView.LayoutParams(-1,-1));scroll.addView(body);
  switch(page){case "Caisse":caisse();break;case "Produits":produits(null);break;case "Stock":stock();break;case "Codes-barres":codes();break;case "Rapports":rapports();break;default:parametres();}
  }
  LinearLayout categoryTile(int index,Runnable action){
@@ -78,8 +78,8 @@ public class MainActivity extends Activity {
  tile.setOnClickListener(v->action.run());return tile;
  }
  void caisse(){
- LinearLayout main=row();body.addView(main);
- LinearLayout left=col(),right=col();main.addView(left,new LinearLayout.LayoutParams(0,-2,1.04f));main.addView(right,new LinearLayout.LayoutParams(0,-2,1.1f));
+ LinearLayout main=row();main.setMinimumHeight((int)(getResources().getDisplayMetrics().heightPixels*0.83f));body.addView(main,new LinearLayout.LayoutParams(-1,-1));
+ LinearLayout left=col(),right=col();main.addView(left,new LinearLayout.LayoutParams(0,-1,1.04f));main.addView(right,new LinearLayout.LayoutParams(0,-1,1.1f));
  LinearLayout categories=panel(left,"▤ Catégories de produits");
  for(int i=0;i<cats.length;i+=4){LinearLayout r=row();categories.addView(r);for(int j=i;j<Math.min(i+4,cats.length);j++){String c=cats[j];int color=catColors[j];LinearLayout tile=categoryTile(j,()->{show("Produits");produits(c.equals("Tous les produits")?null:c);});r.addView(tile,new LinearLayout.LayoutParams(0,Math.max(128,(int)(getResources().getDisplayMetrics().heightPixels*0.16f)),1));}}
  LinearLayout search=panel(left,"▥ Recherche rapide");
@@ -111,11 +111,11 @@ public class MainActivity extends Activity {
  EditText e=qty.hasFocus()?qty:price;String s=e.getText().toString();if(k.equals("←"))s=s.isEmpty()?"":s.substring(0,s.length()-1);else if(k.equals("+"))s=String.valueOf(num(s)+1);else if(k.equals("−"))s=String.valueOf(Math.max(0,num(s)-1));else if(k.equals("×"))s=String.valueOf(num(s)*2);else s+=k.equals(",")?".":k;e.setText(s);e.setSelection(s.length());}
  void produits(String category){
  body.removeAllViews();
- LinearLayout layout=row();body.addView(layout);
+ LinearLayout layout=row();layout.setMinimumHeight((int)(getResources().getDisplayMetrics().heightPixels*0.84f));body.addView(layout,new LinearLayout.LayoutParams(-1,-1));
  LinearLayout side=col(),center=col(),details=col();
- layout.addView(side,new LinearLayout.LayoutParams(0,-2,1.5f));
- layout.addView(center,new LinearLayout.LayoutParams(0,-2,4.3f));
- layout.addView(details,new LinearLayout.LayoutParams(0,-2,2.2f));
+ layout.addView(side,new LinearLayout.LayoutParams(0,-1,1.5f));
+ layout.addView(center,new LinearLayout.LayoutParams(0,-1,4.3f));
+ layout.addView(details,new LinearLayout.LayoutParams(0,-1,2.2f));
  LinearLayout menu=panel(side,"Catégories");
  for(int j=0;j<cats.length;j++){String c=cats[j];menu.addView(btn(catIcons[j]+" "+c,catColors[j],()->produits(c.equals("Tous les produits")?null:c)));}
  LinearLayout list=panel(center,"Produits — "+(category==null?"Tous les produits":category));
@@ -126,7 +126,7 @@ public class MainActivity extends Activity {
  count++;
  String label=productIcon(p.optString("name"))+"\n"+p.optString("name")+"\n"+(p.optDouble("price")>0?eur(p.optDouble("price")):"Prix à saisir")+" / "+p.optString("unit");
  int color=catColors[Math.max(0,Arrays.asList(cats).indexOf(p.optString("cat")))];
- add(grid,btn(label,color,()->{chosen=p.optString("name");chosenCode=p.optString("code");produits(category);}),1);
+ Button productButton=btn(label,color,()->{chosen=p.optString("name");chosenCode=p.optString("code");produits(category);});productButton.setTextSize(17);grid.addView(productButton,new LinearLayout.LayoutParams(0,Math.max(120,(int)(getResources().getDisplayMetrics().heightPixels*0.18f)),1));
  }
  if(count==0)list.addView(txt("Aucun produit dans cette catégorie.",18,navy));
  LinearLayout selection=panel(details,"Article sélectionné");
